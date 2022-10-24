@@ -1,5 +1,7 @@
 import csv
 import os
+import requests
+import re
 
 ###############################################################################
 # Najprej definirajmo nekaj pomožnih orodij za pridobivanje podatkov s spleta.
@@ -19,16 +21,26 @@ def download_url_to_string(url):
     """Funkcija kot argument sprejme niz in poskusi vrniti vsebino te spletne
     strani kot niz. V primeru, da med izvajanje pride do napake vrne None.
     """
+    
     try:
         # del kode, ki morda sproži napako
-        page_content = 'TODO'
-    except 'TODO':
+        response = requests.get(url, headers={
+        # "Accept-Language": "sl-si"
+        })
+        page_content = response.text
+    except Exception as e:
         # koda, ki se izvede pri napaki
         # dovolj je če izpišemo opozorilo in prekinemo izvajanje funkcije
-        raise NotImplementedError()
+        print(f"NAPAKA PRI PRENOSU: {url} ::", e)
+        return(None)
     # nadaljujemo s kodo če ni prišlo do napake
-    raise NotImplementedError()
-
+    
+    return page_content
+    
+    
+    # with open("podatki_z_bolhe.html", 'w') as dat:
+    #     dat.write(page_content)
+    
 
 def save_string_to_file(text, directory, filename):
     """Funkcija zapiše vrednost parametra "text" v novo ustvarjeno datoteko
@@ -48,7 +60,11 @@ def save_string_to_file(text, directory, filename):
 def save_frontpage(page, directory, filename):
     """Funkcija shrani vsebino spletne strani na naslovu "page" v datoteko
     "directory"/"filename"."""
-    raise NotImplementedError()
+    
+    # directory = "", filename = "podatki_z_bolhe.html"
+    
+    vsebina = download_url_to_string(page)
+    save_string_to_file(vsebina, directory, filename)
 
 
 ###############################################################################
@@ -58,7 +74,10 @@ def save_frontpage(page, directory, filename):
 
 def read_file_to_string(directory, filename):
     """Funkcija vrne celotno vsebino datoteke "directory"/"filename" kot niz."""
-    raise NotImplementedError()
+    
+    path = os.path.join(directory, filename)
+    with open(path, 'r', encoding='utf-8') as file_out:
+        return file_out.read()
 
 
 # Definirajte funkcijo, ki sprejme niz, ki predstavlja vsebino spletne strani,
@@ -70,8 +89,18 @@ def read_file_to_string(directory, filename):
 def page_to_ads(page_content):
     """Funkcija poišče posamezne oglase, ki se nahajajo v spletni strani in
     vrne seznam oglasov."""
-    raise NotImplementedError()
+    
+    vzorec_za_oglase = re.compile(
+        r"<article>.*?</article>",
+        flags=re.DOTALL
+    )
 
+    oglasi = []
+    
+    for oglas in vzorec_za_oglase.finditer(page_content):
+        oglasi.append(oglas.group(0))
+        
+    return oglasi
 
 # Definirajte funkcijo, ki sprejme niz, ki predstavlja oglas, in izlušči
 # podatke o imenu, lokaciji, datumu objave in ceni v oglasu.
@@ -80,8 +109,24 @@ def page_to_ads(page_content):
 def get_dict_from_ad_block(block):
     """Funkcija iz niza za posamezen oglasni blok izlušči podatke o imenu, ceni
     in opisu ter vrne slovar, ki vsebuje ustrezne podatke."""
-    raise NotImplementedError()
-
+    vzorec_podatkov_v_oglasu = re.compile(
+        r"<article>.*?<a name=.*?>(?P<ime>.*?)</a>.*?"
+        r'<span class="entity-description-itemCaption">Lokacija: </span>(?P<lokacija>.*?)<br>.*?</div>.*?'
+        r'<div class="entity-pub-date">.*?<time.*?">(?P<datum>.*?)</time></div>.*?'
+        r'<div class="entity-prices">.*?<strong class="price.*?>(?P<cena>.*?)&nbsp;.*?<span>',
+        flags=re.DOTALL
+    )
+    
+    slovar = []
+    for macka in vzorec_podatkov_v_oglasu.finditer(block):
+        slovar.append({
+            'ime': macka.groupdict()['ime'],
+            'datum': macka.groupdict()['datum'],
+            'lokacija': macka.groupdict()['lokacija'],
+            'cena': macka.groupdict()['cena'] + "€",
+        })
+    return slovar 
+        
 
 # Definirajte funkcijo, ki sprejme ime in lokacijo datoteke, ki vsebuje
 # besedilo spletne strani, in vrne seznam slovarjev, ki vsebujejo podatke o
@@ -91,7 +136,15 @@ def get_dict_from_ad_block(block):
 def ads_from_file(filename, directory):
     """Funkcija prebere podatke v datoteki "directory"/"filename" in jih
     pretvori (razčleni) v pripadajoč seznam slovarjev za vsak oglas posebej."""
-    raise NotImplementedError()
+    
+    string = read_file_to_string(directory, filename)
+    seznam_slovarjev = []
+    
+    for blok in page_to_ads(string):
+        seznam_slovarjev.append(get_dict_from_ad_block(blok))
+        
+    
+    return seznam_slovarjev
 
 
 ###############################################################################
@@ -128,10 +181,13 @@ def write_cat_ads_to_csv(ads, directory, filename):
     # Prednost je v tem, da ga lahko pod določenimi pogoji izklopimo v
     # produkcijskem okolju
     assert ads and (all(j.keys() == ads[0].keys() for j in ads))
-    raise NotImplementedError()
+    
+    
 
 
 # Celoten program poženemo v glavni funkciji
+
+# Najprej naredimo posamezne funkcije, ki vse naredijo
 
 def main(redownload=True, reparse=True):
     """Funkcija izvede celoten del pridobivanja podatkov:
@@ -153,6 +209,9 @@ def main(redownload=True, reparse=True):
 
     raise NotImplementedError()
 
+
+# Ta program se izvede samo, če je to file, ki ga poženemo!
+# Če importamo ta file, se ne bo pognalo!
 
 if __name__ == '__main__':
     main()
