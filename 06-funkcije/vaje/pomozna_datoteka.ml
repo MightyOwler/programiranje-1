@@ -15,7 +15,7 @@ let mapi f lst =
   | x :: xs -> mapi_aux ((f x n) :: acc) (n + 1) xs 
 in mapi_aux [] 0 lst
 
-let rec zip sez_A sez_B = function
+let rec zip sez_A sez_B = match with sez_A, sez_B
   | [], [] -> []
   | [], ys -> failwith "Seznama nista enako dolga"
   | xs, [] -> failwith "Seznama nista enako dolga"
