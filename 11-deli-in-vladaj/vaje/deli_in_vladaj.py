@@ -27,6 +27,28 @@
 #     [10, 0, 2, 4, 11, 5, 17, 15, 18]
 ###############################################################################
 
+import random
+
+def pivot(a, start, end):
+    if start == end:
+        return start
+
+    pivot = a[start]
+    first_bigger = start+1  # the index of the first element bigger than pivot
+
+    print(a)
+    for i in range(start+1, end+1):
+        if a[i] < pivot:
+            # switch smaller element with first bigger and update index
+            a[first_bigger], a[i] = a[i], a[first_bigger]
+            first_bigger += 1
+        print(a)
+    # switch pivot with last smaller (which is just before the first bigger)
+    a[start], a[first_bigger-1] = a[first_bigger-1], a[start]
+    print(a)
+    return first_bigger-1
+     
+     
 
 ###############################################################################
 # V tabeli želimo poiskati vrednost k-tega elementa po velikosti.
@@ -43,7 +65,25 @@
 # rešite brez da v celoti uredite tabelo [a].
 ###############################################################################
 
+def kth_el_part(a, k, start, end):
+    if start > end:
+        return None
+    else:
+        pivot_i = pivot(a, start, end)
+        if pivot_i == k:
+            return a[pivot_i]
+        elif pivot_i > k:
+            return kth_el_part(a, k, start, pivot_i - 1)
+        else:
+            return kth_el_part(a, k, pivot_i + 1, end)
 
+
+def kth_element(a, k):
+    if k > len(a):
+        return None
+    else:
+        return kth_el_part(a, k, 0, len(a)-1)
+    
 ###############################################################################
 # Tabelo a želimo urediti z algoritmom hitrega urejanja (quicksort).
 #

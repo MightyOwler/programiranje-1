@@ -6,6 +6,9 @@
  poddrevesi. Na tej točki ne predpostavljamo ničesar drugega o obliki dreves.
 [*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*)
 
+type 'a drevo = 
+| Empty
+| Node of 'a drevo * 'a * 'a drevo
 
 (*----------------------------------------------------------------------------*]
  Definirajmo si testni primer za preizkušanje funkcij v nadaljevanju. Testni
@@ -18,6 +21,9 @@
       0   6   11
 [*----------------------------------------------------------------------------*)
 
+let leaf x = Node(Empty, x, Empty) (*Zgradimo spodnji list, torej da lažje razločimo*)
+
+let test_tree = Node(Node(leaf 0, 2, Empty), 5, Node(leaf 6, 7, leaf 11))
 
 (*----------------------------------------------------------------------------*]
  Funkcija [mirror] vrne prezrcaljeno drevo. Na primeru [test_tree] torej vrne
@@ -33,7 +39,9 @@
  Node (Empty, 2, Node (Empty, 0, Empty)))
 [*----------------------------------------------------------------------------*)
 
-
+let rec mirror = function
+| Empty -> Empty
+| Node(levi_otrok, x, desni_otrok) -> Node(mirror desni_otrok, x, mirror levi_otrok)
 (*----------------------------------------------------------------------------*]
  Funkcija [height] vrne višino oz. globino drevesa, funkcija [size] pa število
  vseh vozlišč drevesa.
@@ -44,7 +52,13 @@
  - : int = 6
 [*----------------------------------------------------------------------------*)
 
+let rec height = function 
+| Empty -> 0
+| Node (levi_otrok, x, desni_otrok) -> max (height levi_otrok) (height desni_otrok) + 1
 
+let rec size = function 
+| Empty -> 0
+| Node (levi_otrok, x, desni_otrok) -> size levi_otrok + size desni_otrok + 1
 (*----------------------------------------------------------------------------*]
  Funkcija [map_tree f tree] preslika drevo v novo drevo, ki vsebuje podatke
  drevesa [tree] preslikane s funkcijo [f].
@@ -55,7 +69,9 @@
  Node (Node (Empty, true, Empty), true, Node (Empty, true, Empty)))
 [*----------------------------------------------------------------------------*)
 
-
+let rec map_tree f = function 
+| Empty -> Empty
+| Node (levi_otrok, x, desni_otrok) -> Node (map_tree f levi_otrok, f x, map_tree f desni_otrok)
 (*----------------------------------------------------------------------------*]
  Funkcija [list_of_tree] pretvori drevo v seznam. Vrstni red podatkov v seznamu
  naj bo takšen, da v primeru binarnega iskalnega drevesa vrne urejen seznam.
@@ -64,6 +80,9 @@
  - : int list = [0; 2; 5; 6; 7; 11]
 [*----------------------------------------------------------------------------*)
 
+let rec list_of_tree = function
+  | Empty -> []
+  | Node(l, x, r) -> (list_of_tree l) @ [x] @ (list_of_tree r)
 
 (*----------------------------------------------------------------------------*]
  Funkcija [is_bst] preveri ali je drevo binarno iskalno drevo (Binary Search 
@@ -76,6 +95,11 @@
  - : bool = false
 [*----------------------------------------------------------------------------*)
 
+let rec is_bst drevo = 
+     let rec je_seznam_urejen = function
+     | [] | _ :: [] -> true
+     | x :: y :: xs -> if x < y then je_seznam_urejen (y :: xs) else false
+in drevo |> list_of_tree |> je_seznam_urejen
 
 (*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*]
  V nadaljevanju predpostavljamo, da imajo dvojiška drevesa strukturo BST.
@@ -90,6 +114,25 @@
  # member 3 test_tree;;
  - : bool = false
 [*----------------------------------------------------------------------------*)
+let rec insert x = function
+     | Empty -> leaf x
+     | Node(levi_otrok, y, desni_otrok) -> 
+          if x < y 
+               then Node(insert x levi_otrok, y, desni_otrok)
+               else Node(levi_otrok, y, insert x desni_otrok)
+
+(* 
+let rec insert x = function
+| Empty -> leaf x
+| Node(l, y, r) when x = y -> Node(l, y, r)
+| Node(l, y, r) when x < y -> Node(insert x l, y, r)
+| Node(l, y, r) (* when x > y *) -> Node(l, y, insert x r) *)
+
+let rec member x = function
+     | Empty -> false
+     | Node(levi_otrok, y, desni_otrok) when x = y -> true
+     | Node(levi_otrok, y, desni_otrok) when x < y -> member x levi_otrok
+     | Node(levi_otrok, y, desni_otrok) -> member x desni_otrok
 
 
 (*----------------------------------------------------------------------------*]
@@ -99,6 +142,11 @@
  funkcije [member2] na drevesu z n vozlišči, ki ima globino log(n). 
 [*----------------------------------------------------------------------------*)
 
+let rec member2 x = function
+  | Empty -> false
+  | Node(l, y, r) -> x = y || (member2 x l) || (member2 x r)
+
+  (* Moramo primerjati z or, tako dobimo neko eksponentno zahtevnost *)
 
 (*----------------------------------------------------------------------------*]
  Funkcija [succ] vrne naslednjika korena danega drevesa, če obstaja. Za drevo
@@ -112,6 +160,26 @@
  # pred (Node(Empty, 5, leaf 7));;
  - : int option = None
 [*----------------------------------------------------------------------------*)
+
+let succ bst =
+     let rec minimal = function
+       | Empty -> None
+       | Node(Empty, x, _) -> Some x
+       | Node(l, _, _) -> minimal l
+     in
+     match bst with
+     | Empty -> None
+     | Node(_, _, r) -> minimal r
+   
+   let pred bst =
+     let rec maximal = function
+       | Empty -> None
+       | Node(_, x, Empty) -> Some x
+       | Node(_, _, r) -> maximal r
+     in
+     match bst with
+     | Empty -> None
+     | Node(l, _, _) -> maximal l
 
 
 (*----------------------------------------------------------------------------*]
@@ -127,6 +195,16 @@
  Node (Node (Empty, 6, Empty), 11, Empty))
 [*----------------------------------------------------------------------------*)
 
+let rec delete x = function
+  | Empty -> Empty
+  | Node(l, y, r) when x > y -> Node(l, y, delete x r)
+  | Node(l, y, r) when x < y -> Node(delete x l, y, r)
+  | Node(l, y, r) as bst -> (
+     match succ bst with
+     | None -> l
+     | Some s -> 
+          let clean_r = delete s r in
+          Node(l, s, clean_r))
 
 (*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*]
  SLOVARJI
@@ -139,6 +217,7 @@
  vrednosti, ga parametriziramo kot [('key, 'value) dict].
 [*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*)
 
+type ('key, 'value) dict = ('key * 'value) drevo
 
 (*----------------------------------------------------------------------------*]
  Napišite testni primer [test_dict]:
@@ -149,7 +228,7 @@
      "c":-2
 [*----------------------------------------------------------------------------*)
 
-
+let test_dict : (string, int) dict = Node(leaf ("a", 0), ("b", 1), Node(leaf ("c", -2), ("d", 2), Empty))
 (*----------------------------------------------------------------------------*]
  Funkcija [dict_get key dict] v slovarju poišče vrednost z ključem [key]. Ker
  slovar vrednosti morda ne vsebuje, vrne [option] tip.
@@ -160,6 +239,13 @@
  - : int option = Some (-2)
 [*----------------------------------------------------------------------------*)
 
+let rec dict_get key = function
+| Empty -> None
+| Node(l, (k', vrednost), d) when key = k' -> Some vrednost
+| Node(l, (k', vrednost), d) when key < k'-> dict_get key l
+| Node(l, (k', vrednost), d) -> dict_get key d
+
+(* Ideja: takole lahko razpakiraš vrednosti v slovarju. Če je torej oblike ('a, 'b, 'c) dict, potem moramo razpakirati z (a, b, b) *)
       
 (*----------------------------------------------------------------------------*]
  Funkcija [print_dict] sprejme slovar s ključi tipa [string] in vrednostmi tipa
@@ -177,7 +263,15 @@
  - : unit = ()
 [*----------------------------------------------------------------------------*)
 
-
+let rec print_dict = function
+| Empty -> ()
+| Node (l, (kljuc, vrednost), d) -> (
+     print_dict l;
+     print_string (kljuc ^ " : ");
+     print_int vrednost;
+     print_newline ();
+     print_dict d;
+)
 (*----------------------------------------------------------------------------*]
  Funkcija [dict_insert key value dict] v slovar [dict] pod ključ [key] vstavi
  vrednost [value]. Če za nek ključ vrednost že obstaja, jo zamenja.
@@ -197,3 +291,10 @@
  - : unit = ()
 [*----------------------------------------------------------------------------*)
 
+let rec dict_insert key value = function
+| Empty -> leaf (key, value)
+| Node (l, (kljuc, vrednost), d) when key = kljuc ->  Node (l, (kljuc, value), d)
+| Node (l, (kljuc, vrednost), d) when key < kljuc -> Node (dict_insert key value l, (kljuc, vrednost), d)
+| Node (l, (kljuc, vrednost), d) -> Node (l, (kljuc, vrednost), dict_insert key value d)
+
+(* Ideja: če gremo vedno samo na eno vejo, potem lahko brez zadržkov na koncu dodamo list *)

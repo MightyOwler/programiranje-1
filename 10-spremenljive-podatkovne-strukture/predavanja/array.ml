@@ -2,7 +2,9 @@ let tab = [| 1; 2; 3; 4 |]
 
 let obrnjen tab =
   let n = Array.length tab in
-  Array.init n (fun i -> tab.(n - i - 1))
+  Array.init n (fun i -> (tab.(n - i - 1)))
+
+(* Array.init je podobno kot nek map *)
 
 let zamenjaj tab i j =
   let x = tab.(i) in

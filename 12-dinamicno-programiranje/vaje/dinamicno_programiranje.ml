@@ -20,7 +20,6 @@ let test_matrix =
   [| [| 1 ; 2 ; 0 |];
      [| 2 ; 4 ; 5 |];
      [| 7 ; 0 ; 1 |] |]
-
 (*----------------------------------------------------------------------------*]
  Poleg količine sira, ki jo miška lahko poje, jo zanima tudi točna pot, ki naj
  jo ubere, da bo prišla do ustrezne pojedine.

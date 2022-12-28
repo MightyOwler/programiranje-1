@@ -78,6 +78,10 @@ V ukazni vrstici poženite:
 
     C:\OCaml64\usr\local\bin\ocaml-env.exe exec -- C:\OCaml64\home\???\.opam\4.12.0+mingw64c\bin\ocamlc.exe
 
+**Zame**:
+
+    C:\OCaml64\usr\local\bin\ocaml-env.exe exec -- C:\OCaml64\home\jasak\.opam\4.14.0+mingw64c\bin\ocamlc.exe
+
 To ustvari datoteko `sudoku.exe`, ki ob klicu
 
     ./sudoku.exe primer-1.sdk primer-2.sdk ...
@@ -117,12 +121,12 @@ Nekaj primerov nestandardnih sudokujev je na voljo v mapi `sudokuji`, vendar se 
 Možne razširitve vse predpostavljajo običajna pravila sudokuja, poleg tega pa se na mreži lahko nahajajo še:
 
 - _Termometri_: Števke v celicah termometra morajo strogo naraščati od začetka do konca termometra.
-Vrstica pogoja je oblike `T: (x1,y1);...;(xn;yn)`, kjer je števka na mestu `(x1,y1)` najmanjša, tista na mestu `(xn;yn)` pa največja.  
+  Vrstica pogoja je oblike `T: (x1,y1);...;(xn;yn)`, kjer je števka na mestu `(x1,y1)` najmanjša, tista na mestu `(xn;yn)` pa največja.
 - _Puščice_: Puščica se začne na podani celici in kaže ne eno ali več različnih celic, katerih vsota mora biti enaka števki v začetni celici.
-Vrstica pogoja je oblike `A: (x1,y1) -> (x2,y2);...;(xn;yn)`, kjer je števka na mestu `(x1,y1)` enaka vsoti števk na mestih `(x2,y2)`, ..., `(xn;yn)`.
-Vsota števil v celicah repa more biti enaka kot število v glavi.
+  Vrstica pogoja je oblike `A: (x1,y1) -> (x2,y2);...;(xn;yn)`, kjer je števka na mestu `(x1,y1)` enaka vsoti števk na mestih `(x2,y2)`, ..., `(xn;yn)`.
+  Vsota števil v celicah repa more biti enaka kot število v glavi.
 - _Kletke_: Kletke so skupek povezanih celic, za katere zahtevamo, da vsebujejo sama različna števila s podano vsoto.
-Vrstica pogoja je oblike `K: X (x1,y1);...;(xn;yn)`, kjer je vsota (medsebojno različnih) števk na mestih `(x1,y1)`, ..., `(xn;yn)` enaka `X`.
+  Vrstica pogoja je oblike `K: X (x1,y1);...;(xn;yn)`, kjer je vsota (medsebojno različnih) števk na mestih `(x1,y1)`, ..., `(xn;yn)` enaka `X`.
 
 Vhodni podatki razširjenih testnih primerov so v datotekah `sudokuji/puscice-*.sdk`, `sudokuji/termometri-*.sdk`, `sudokuji/kletke-*.sdk`.
 Vhodni podatki se začnejo z običajno mrežo kot pri obicajnih sudokujih, čemur sledi prazna vrstica in vrstice, ki opisujejo dodatne zahteve.
