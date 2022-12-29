@@ -1,23 +1,31 @@
-type available = { loc : int * int; possible : int list; available_grid: available Model.grid}
+type available = { loc : int * int; possible : int list}
 
 (* TODO: tip stanja ustrezno popravite, saj boste med reševanjem zaradi učinkovitosti
    želeli imeti še kakšno dodatno informacijo *)
-type state = { problem : Model.problem; current_grid : int option Model.grid}
+type state = { problem : Model.problem; current_grid : int option Model.grid}  (*; available_grid: available Model.grid*)
 
 (* Pogledamo, ali je vstavljanje števila na določeno koordinato mreže legalno*)
-let legal_number (grid : int option Model.grid) row_ind col_ind n =
-  [Model.get_row grid row_ind; Model.get_column grid col_ind; 
+let check_number_legality (grid : int option Model.grid) row_ind col_ind n =
+  [Model.get_row grid row_ind] @ [Model.get_column grid col_ind] @ [
   Model.coords_to_box grid row_ind col_ind] 
   |> List.map Array.to_list |> List.concat |> List.mem (Some n) |> not
 
+let sudoku_numbers = [1; 2; 3; 4; 5; 6; 7; 8; 9]
+let coords_to_available row_ind col_ind (grid : int option Model.grid) (n : int option) =
+  let possible_list = List.filter (fun n -> check_number_legality grid row_ind col_ind n) sudoku_numbers
+  in 
+  match n with
+  | Some _ -> {loc = (row_ind, col_ind); possible = []}
+  | None -> {loc = (row_ind, col_ind); possible = possible_list}
+
 (* To zdaj dela. 
-# legal_number Model.test_option_grid 5 5 5;;
+# check_number_legality Model.test_option_grid 5 5 5;;
 - : bool = false *)
 
 
 let print_state (state : state) : unit =
   Model.print_grid
-    (function None -> "?" | Some digit -> string_of_int digit)
+    (function None -> "-" | Some digit -> string_of_int digit)
     state.current_grid
 
 type response = Solved of Model.solution | Unsolved of state | Fail of state
