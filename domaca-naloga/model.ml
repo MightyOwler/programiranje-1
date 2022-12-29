@@ -88,7 +88,7 @@ let get_box (grid : 'a grid) (box_ind : int) =
   in
   let (kvocient, ostanek) = divison_by_3(box_ind)
 in
-Array.init 9 (fun ind -> grid.(3 * ostanek + fst (divison_by_3 ind)).(3 * kvocient + + snd (divison_by_3 ind)))
+Array.init 9 (fun ind -> grid.(3 * ostanek + fst (divison_by_3 ind)).(3 * kvocient + snd (divison_by_3 ind)))
 
 let boxes grid = List.init 9 (get_box grid)
 
@@ -133,7 +133,12 @@ let grid_of_string cell_of_char str =
 
 type problem = { initial_grid : int option grid }
 
-let print_problem problem : unit = failwith "TODO"
+let print_problem problem : unit = 
+  let string_of_int_option (n : int option) = match n with
+| None -> " "
+| Some k -> string_of_int k
+  in
+  print_grid string_of_int_option problem.initial_grid
 
 let problem_of_string str =
   let cell_of_char = function
@@ -147,6 +152,18 @@ let problem_of_string str =
 
 type solution = int grid
 
-let print_solution solution = failwith "TODO"
+let print_solution solution = print_grid string_of_int solution
 
-let is_valid_solution problem solution = failwith "TODO"
+let valid_array array =
+  let is_included = Array.make 10 false in
+  Array.iter (fun x -> is_included.(x) <- true) array;
+  let valid_result = ref true in
+  for i = 1 to 9 do
+    if is_included.(i) = false then valid_result := false
+  done;
+  !valid_result;;
+
+let is_valid_solution problem solution = 
+  (columns solution) @ (rows solution) @ (boxes solution)
+  |> List.map valid_array
+  |> List.fold_left ((&&)) true
