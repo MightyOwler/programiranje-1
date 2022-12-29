@@ -78,15 +78,15 @@ V ukazni vrstici poženite:
 
     C:\OCaml64\usr\local\bin\ocaml-env.exe exec -- C:\OCaml64\home\???\.opam\4.12.0+mingw64c\bin\ocamlc.exe
 
-**Zame**:
-
-    C:\OCaml64\usr\local\bin\ocaml-env.exe exec -- C:\OCaml64\home\jasak\.opam\4.14.0+mingw64c\bin\ocamlc.exe
-
 To ustvari datoteko `sudoku.exe`, ki ob klicu
 
     ./sudoku.exe primer-1.sdk primer-2.sdk ...
 
 reši sudokuje v datotekah `primer-1.sdk`, `primer-2.sdk`, ...
+
+**Zame**:
+
+    ./sudoku.exe ./sudokuji/obicajni-1.sdk
 
 V mapi `sudokuji` najdete testne datoteke, ki vsebujejo primere običajnih sudokujev. Program lahko na vseh sudokujih poženete kot
 

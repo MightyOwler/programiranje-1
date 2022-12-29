@@ -2,6 +2,7 @@
 
 type 'a grid = 'a Array.t Array.t
 
+
 (* Funkcije za prikaz mreže.
    Te definiramo najprej, da si lahko z njimi pomagamo pri iskanju napak. *)
 
@@ -16,11 +17,20 @@ let chunkify size lst =
   in
   aux [] [] size lst
 
+  (*# chunkify 3 [0; 1; 2; 3; 4; 5; 6; 7; 8];;
+  - : int list list = [[0; 1; 2]; [3; 4; 5]; [6; 7; 8]] *)
+
 let string_of_list string_of_element sep lst =
   lst |> List.map string_of_element |> String.concat sep
 
+  (* # string_of_list string_of_int " - " [0; 1; 2; 3; 4; 5; 6; 7; 8];;
+- : string = "0 - 1 - 2 - 3 - 4 - 5 - 6 - 7 - 8" *)
+
 let string_of_nested_list string_of_element inner_sep outer_sep =
   string_of_list (string_of_list string_of_element inner_sep) outer_sep
+
+  (* # string_of_nested_list string_of_int "-" ", " [[0; 1; 2]; [3; 4; 5]; [6; 7; 8]];;
+- : string = "0-1-2, 3-4-5, 6-7-8" *)
 
 let string_of_row string_of_cell row =
   let string_of_cells =
@@ -40,25 +50,51 @@ let print_grid string_of_cell grid =
   Printf.printf "┏%s┯%s┯%s┓\n" big big big;
   Printf.printf "%s" row_blocks;
   Printf.printf "┗%s┷%s┷%s┛\n" big big big
+(* 
+  print_grid
+  (function None -> " " | Some digit -> string_of_int digit)
+  state.current_grid  *)
 
+(* Funckija za naključni list, da lahko prevejam spodnje funkcije*)
+
+  let rec random_list n = 
+    let rec aux n acc = 
+      match n with
+      | 0 -> acc
+      | _ -> aux (n-1) ((Random.int 8) + 1 :: acc)
+    in
+    aux n [];;
+    
+let list_to_grid list =
+  list |> chunkify 9 |> List.map Array.of_list |> Array.of_list
+      
 (* Funkcije za dostopanje do elementov mreže *)
+let test_grid = list_to_grid (random_list 81);;
 
-let get_row (grid : 'a grid) (row_ind : int) = failwith "TODO"
+let get_row (grid : 'a grid) (row_ind : int) = grid.(row_ind)
 
-let rows grid = failwith "TODO"
+let rows grid = List.init 9 (get_row grid)
 
 let get_column (grid : 'a grid) (col_ind : int) =
   Array.init 9 (fun row_ind -> grid.(row_ind).(col_ind))
 
 let columns grid = List.init 9 (get_column grid)
 
-let get_box (grid : 'a grid) (box_ind : int) = failwith "TODO"
+let get_box (grid : 'a grid) (box_ind : int) = 
+  let divison_by_3 x =
+    let q = x / 3 in
+    let r = x mod 3 in
+    (q, r)
+  in
+  let (kvocient, ostanek) = divison_by_3(box_ind)
+in
+Array.init 9 (fun ind -> grid.(3 * ostanek + fst (divison_by_3 ind)).(3 * kvocient + + snd (divison_by_3 ind)))
 
-let boxes grid = failwith "TODO"
+let boxes grid = List.init 9 (get_box grid)
 
 (* Funkcije za ustvarjanje novih mrež *)
 
-let map_grid (f : 'a -> 'b) (grid : 'a grid) : 'b grid = failwith "TODO"
+let map_grid (f : 'a -> 'b) (grid : 'a grid) : 'b grid = Array.init 9 (fun row_ind -> Array.map f grid.(row_ind))
 
 let copy_grid (grid : 'a grid) : 'a grid = map_grid (fun x -> x) grid
 
