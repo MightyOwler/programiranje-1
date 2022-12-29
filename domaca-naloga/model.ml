@@ -57,19 +57,28 @@ let print_grid string_of_cell grid =
 
 (* Funckija za naključni list, da lahko prevejam spodnje funkcije*)
 
-  let rec random_list n = 
+  let rec random_int_list n = 
     let rec aux n acc = 
       match n with
       | 0 -> acc
       | _ -> aux (n-1) ((Random.int 8) + 1 :: acc)
     in
     aux n [];;
+
+    let rec random_int_option_list n = 
+      let rec aux n acc = 
+        match n with
+        | 0 -> acc
+        | _ -> aux (n-1) (Some ((Random.int 8) + 1) :: acc)
+      in
+      aux n [];;
     
 let list_to_grid list =
   list |> chunkify 9 |> List.map Array.of_list |> Array.of_list
+let test_grid = list_to_grid (random_int_list 81);;
+let test_option_grid = list_to_grid (random_int_option_list 81);;
       
 (* Funkcije za dostopanje do elementov mreže *)
-let test_grid = list_to_grid (random_list 81);;
 
 let get_row (grid : 'a grid) (row_ind : int) = grid.(row_ind)
 
@@ -80,12 +89,11 @@ let get_column (grid : 'a grid) (col_ind : int) =
 
 let columns grid = List.init 9 (get_column grid)
 
+let divison_by_3 x =
+  let q = x / 3 in
+  let r = x mod 3 in
+  (q, r)
 let get_box (grid : 'a grid) (box_ind : int) = 
-  let divison_by_3 x =
-    let q = x / 3 in
-    let r = x mod 3 in
-    (q, r)
-  in
   let (kvocient, ostanek) = divison_by_3(box_ind)
 in
 Array.init 9 (fun ind -> grid.(3 * ostanek + fst (divison_by_3 ind)).(3 * kvocient + snd (divison_by_3 ind)))
@@ -93,6 +101,9 @@ Array.init 9 (fun ind -> grid.(3 * ostanek + fst (divison_by_3 ind)).(3 * kvocie
 let boxes grid = List.init 9 (get_box grid)
 
 (* Funkcije za ustvarjanje novih mrež *)
+
+let coords_to_box grid row_ind col_ind =
+  get_box grid (3 * (col_ind / 3) + (row_ind / 3))
 
 let map_grid (f : 'a -> 'b) (grid : 'a grid) : 'b grid = Array.init 9 (fun row_ind -> Array.map f grid.(row_ind))
 
@@ -167,3 +178,5 @@ let is_valid_solution problem solution =
   (columns solution) @ (rows solution) @ (boxes solution)
   |> List.map valid_array
   |> List.fold_left ((&&)) true
+
+  

@@ -1,9 +1,18 @@
-type available = { loc : int * int; possible : int list }
+type available = { loc : int * int; possible : int list; available_grid: available Model.grid}
 
 (* TODO: tip stanja ustrezno popravite, saj boste med reševanjem zaradi učinkovitosti
    želeli imeti še kakšno dodatno informacijo *)
 type state = { problem : Model.problem; current_grid : int option Model.grid}
 
+(* Pogledamo, ali je vstavljanje števila na določeno koordinato mreže legalno*)
+let legal_number (grid : int option Model.grid) row_ind col_ind n =
+  [Model.get_row grid row_ind; Model.get_column grid col_ind; 
+  Model.coords_to_box grid row_ind col_ind] 
+  |> List.map Array.to_list |> List.concat |> List.mem (Some n) |> not
+
+(* To zdaj dela. 
+# legal_number Model.test_option_grid 5 5 5;;
+- : bool = false *)
 
 
 let print_state (state : state) : unit =
