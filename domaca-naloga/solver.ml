@@ -75,9 +75,10 @@ let branch_state (state : state) : (state * state) option =
   if state.current_grid != trivialy_corrected then
     Some ({state with current_grid = trivialy_corrected; available_grid = get_available_grid trivialy_corrected}, {state with available_grid = get_available_grid trivialy_corrected})
   else
+    (* Tukaj lahko dam None v primeru, ko je pogoj izpoljnen, vendar ni pravilna rešitev*)
     Some ({state with current_grid = trivialy_corrected; available_grid = (Model.copy_grid state.available_grid)}, {state with available_grid = (Model.copy_grid state.available_grid)})
 
-    
+
 (* pogledamo, če trenutno stanje vodi do rešitve *)
 let rec solve_state (state : state) =
   (* uveljavimo trenutne omejitve in pogledamo, kam smo prišli *)
