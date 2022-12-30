@@ -2,11 +2,11 @@ type available = { loc : int * int; possible : int list}
 
 (* TODO: tip stanja ustrezno popravite, saj boste med reševanjem zaradi učinkovitosti
    želeli imeti še kakšno dodatno informacijo *)
-type state = { problem : Model.problem; current_grid : int option Model.grid}  (*; available_grid: available Model.grid*)
+type state = { problem : Model.problem; current_grid : int option Model.grid; available_grid: available Model.grid }
 
 (* Pogledamo, ali je vstavljanje števila na določeno koordinato mreže legalno*)
 let check_number_legality (grid : int option Model.grid) row_ind col_ind n =
-  [Model.get_row grid row_ind] @ [Model.get_column grid col_ind] @ [
+  [Model.get_row grid row_ind; Model.get_column grid col_ind;
   Model.coords_to_box grid row_ind col_ind] 
   |> List.map Array.to_list |> List.concat |> List.mem (Some n) |> not
 
@@ -15,13 +15,32 @@ let coords_to_available row_ind col_ind (grid : int option Model.grid) (n : int 
   let possible_list = List.filter (fun n -> check_number_legality grid row_ind col_ind n) sudoku_numbers
   in 
   match n with
-  | Some _ -> {loc = (row_ind, col_ind); possible = []}
   | None -> {loc = (row_ind, col_ind); possible = possible_list}
+  | Some _ -> {loc = (row_ind, col_ind); possible = []}
 
 (* To zdaj dela. 
 # check_number_legality Model.test_option_grid 5 5 5;;
 - : bool = false *)
 
+let get_available_grid (grid : int option Model.grid) =
+  let foldaj row_ind col_ind (n : int option) (acc : available list) = 
+    acc @ [(coords_to_available row_ind col_ind grid n)]
+  in
+    Model.list_to_grid (Model.foldi_grid foldaj grid [])
+
+let match_trivial (n : int option) (avail : available) =
+  match n, avail.possible with
+  | Some x, _ -> Some x
+  | _, []  -> None
+  | _, [x] -> Some x
+  | _ -> None
+
+let solve_trivial_cells (grid : int option Model.grid) =
+  let listified_current = Model.grid_to_list grid in
+  let listified_available = Model.grid_to_list (get_available_grid grid) in
+  Model.list_to_grid (List.map2 match_trivial listified_current listified_available)
+
+  (* Vzamemo nek grid, ki ga dobimo iz state.current_grid, in mu zapolnimo trivialne celice.*)
 
 let print_state (state : state) : unit =
   Model.print_grid
@@ -31,7 +50,7 @@ let print_state (state : state) : unit =
 type response = Solved of Model.solution | Unsolved of state | Fail of state
 
 let initialize_state (problem : Model.problem) : state =
-  { current_grid = Model.copy_grid problem.initial_grid; problem }
+  { current_grid = Model.copy_grid problem.initial_grid; problem; available_grid = get_available_grid problem.initial_grid}
 
 let validate_state (state : state) : response =
   let unsolved =
@@ -50,8 +69,15 @@ let branch_state (state : state) : (state * state) option =
      v prvem predpostavi, da hipoteza velja, v drugem pa ravno obratno.
      Če bo vaš algoritem najprej poizkusil prvo možnost, vam morda pri drugi
      za začetek ni treba zapravljati preveč časa, saj ne bo nujno prišla v poštev. *)
-  failwith "TODO"
 
+  (* Tole se gotovo da izboljšati. Zaenkrat niti še ne dela prav, treba bo še dosti popraviti. Namreč če je enaka, bo treba insertati kar eno vrednost. *)
+  let trivialy_corrected = solve_trivial_cells state.current_grid in
+  if state.current_grid != trivialy_corrected then
+    Some ({state with current_grid = trivialy_corrected; available_grid = get_available_grid trivialy_corrected}, {state with available_grid = get_available_grid trivialy_corrected})
+  else
+    Some ({state with current_grid = trivialy_corrected; available_grid = (Model.copy_grid state.available_grid)}, {state with available_grid = (Model.copy_grid state.available_grid)})
+
+    
 (* pogledamo, če trenutno stanje vodi do rešitve *)
 let rec solve_state (state : state) =
   (* uveljavimo trenutne omejitve in pogledamo, kam smo prišli *)

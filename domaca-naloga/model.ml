@@ -17,6 +17,15 @@ let chunkify size lst =
   in
   aux [] [] size lst
 
+let grid_to_list grid = 
+  let rec loop row_idx col_idx lst = 
+    match row_idx, col_idx with
+    | row_idx, col_idx when row_idx >= Array.length grid -> lst
+    | row_idx, col_idx when col_idx >= Array.length grid.(row_idx) -> loop (row_idx + 1) 0 lst
+    | row_idx, col_idx -> loop row_idx (col_idx + 1) (grid.(row_idx).(col_idx) :: lst)
+  in
+  List.rev (loop 0 0 [])
+
   (*# chunkify 3 [0; 1; 2; 3; 4; 5; 6; 7; 8];;
   - : int list list = [[0; 1; 2]; [3; 4; 5]; [6; 7; 8]] *)
 
@@ -75,8 +84,17 @@ let print_grid string_of_cell grid =
     
 let list_to_grid list =
   list |> chunkify 9 |> List.map Array.of_list |> Array.of_list
+
 let test_grid = list_to_grid (random_int_list 81);;
-let test_option_grid = list_to_grid (random_int_option_list 81);;
+let test_option_grid = [|[|None; Some 6; Some 6; Some 2; Some 4; Some 1; Some 2; Some 5; Some 4|];
+[|Some 1; Some 2; Some 7; Some 5; Some 7; Some 3; Some 4; Some 7; Some 2|];
+[|Some 8; Some 2; Some 7; Some 4; Some 7; Some 7; Some 8; Some 4; Some 2|];
+[|Some 2; Some 8; Some 3; Some 3; Some 8; Some 1; Some 6; Some 1; Some 3|];
+[|Some 5; Some 6; Some 4; Some 7; Some 4; Some 2; Some 7; Some 8; Some 8|];
+[|Some 7; Some 1; Some 5; Some 3; Some 5; Some 7; Some 2; Some 6; Some 3|];
+[|Some 4; Some 2; Some 4; Some 3; Some 2; Some 2; Some 7; Some 4; Some 4|];
+[|Some 5; Some 8; Some 6; Some 2; Some 6; Some 5; Some 7; Some 3; Some 2|];
+[|Some 7; Some 2; Some 4; Some 7; Some 1; Some 3; Some 5; Some 6; None|]|];;
       
 (* Funkcije za dostopanje do elementov mreže *)
 
@@ -158,6 +176,22 @@ let problem_of_string str =
     | _ -> None
   in
   { initial_grid = grid_of_string cell_of_char str }
+(* 
+  let test_problem = "
+  ┏━━━┯━━━┯━━━┓
+  ┃483│921│657┃
+  ┃967│3 5│821┃
+  ┃251│876│493┃
+  ┠───┼───┼───┨
+  ┃548│132│976┃
+  ┃729│ 64│ 38┃
+  ┃136│798│ 45┃
+  ┠───┼───┼───┨
+  ┃372│689│514┃
+  ┃814│253│769┃
+  ┃695│417│382┃
+  ┗━━━┷━━━┷━━━┛"
+  |> problem_of_string *)
 
 (* Model za izhodne rešitve *)
 
