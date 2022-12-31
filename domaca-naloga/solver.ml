@@ -49,7 +49,6 @@ let insert_into_a_grid grid row_ind col_ind value =
     (new_grid).(row_ind).(col_ind) <- value;
   new_grid
 
-  (* Če bom spremenil na available_list, bo treba to popraviti. Še vedno pa je smisleno obdržati listified_current*)
 let solve_trivial_cells grid =
   let singular_availables = grid |> get_available_list_from_grid |> singularAvailables in
   if singular_availables = [] then grid 
@@ -82,40 +81,33 @@ let validate_state (state : state) : response =
     else Fail state
 
 let branch_state (state : state) : (state * state) option =
-  (* TODO: Pripravite funkcijo, ki v trenutnem stanju poišče hipotezo, glede katere
-     se je treba odločiti. Če ta obstaja, stanje razveji na dve stanji:
-     v prvem predpostavi, da hipoteza velja, v drugem pa ravno obratno.
-     Če bo vaš algoritem najprej poizkusil prvo možnost, vam morda pri drugi
-     za začetek ni treba zapravljati preveč časa, saj ne bo nujno prišla v poštev. *)
-
-  (* Tole se gotovo da izboljšati. Zaenkrat niti še ne dela prav, treba bo še dosti popraviti. Namreč če je enaka, bo treba insertati kar eno vrednost. *)
+  (* Razdelimo glede na dolžino available_lista. *)
   if state.available_list |> List.length  = 0 then None 
   else if  state.available_list |> List.length  = 1 then
       let first_avail = state.available_list |> List.hd in
       let first_int = Some (List.hd first_avail.possible) in
       let (x, y) = first_avail.loc in
-      let new_available_list1 = state.available_list |> List.tl |> nonzeroAvailables |> orderAvailablesByPossible in
       let new_random_grid1 = insert_into_a_grid state.current_grid x y first_int in
-      (* Ena možnost je potem itak brezvezna*)
-      Some ({state with current_grid = new_random_grid1; available_list = new_available_list1}, {state with available_list = []})
+      (* V tem primeru je itak že rešen sudoku*)
+      Some ({state with current_grid = new_random_grid1; available_list = []}, {state with available_list = []})
   else  
     let trivialy_corrected = state.current_grid |> solve_trivial_cells in
     (* Če imamo kake trivialne številke, potem preučuje samo to možnost*)
     if state.current_grid != trivialy_corrected then
-      Some ({state with current_grid = trivialy_corrected; available_list = trivialy_corrected |> get_available_list_from_grid |> nonzeroAvailables}, {state with available_list = []})
-    
+      (* V tem primeru samo vstavimo trivialne, ni treba razvejevati*)
+      Some ({state with current_grid = trivialy_corrected; available_list = trivialy_corrected |> get_available_list_from_grid |> nonzeroAvailables |> orderAvailablesByPossible}, {state with available_list = []})
     else
       (* Tukaj lahko dam None v primeru, ko je pogoj izpolnjen, vendar ni pravilna rešitev*)
-      let first_avail = trivialy_corrected |> get_available_list_from_grid |> nonzeroAvailables |> orderAvailablesByPossible |> List.hd in
+      let first_avail = state.available_list |> List.hd in
       let (x, y) = first_avail.loc in
-      let first_int = Some (List.hd first_avail.possible) in
-      let second_int = Some (List.hd (List.tl first_avail.possible)) in
-      let new_grid1 = insert_into_a_grid trivialy_corrected x y first_int in
-      let new_grid2 = insert_into_a_grid trivialy_corrected x y second_int in
+      let first_guess = Some (List.hd first_avail.possible) in
+      let second_guess = Some (List.hd (List.tl first_avail.possible)) in
+      let new_grid1 = insert_into_a_grid state.current_grid x y first_guess |> solve_trivial_cells in
+      let new_grid2 = insert_into_a_grid state.current_grid x y second_guess |> solve_trivial_cells in
       let new_available_list1 = new_grid1 |> get_available_list_from_grid |> nonzeroAvailables |> orderAvailablesByPossible in
       let new_available_list2 = new_grid2 |> get_available_list_from_grid |> nonzeroAvailables |> orderAvailablesByPossible in
+      (* Zdi se, da tukaj v bistvu gledam ene in iste možnosti 2-krat. Verjetno se da optimizirazi z memoizacijo.*)
       Some ({state with current_grid = new_grid1; available_list = new_available_list1}, {state with current_grid = new_grid2; available_list = new_available_list2})
-
 
 (* pogledamo, če trenutno stanje vodi do rešitve *)
 let rec solve_state (state : state) =
