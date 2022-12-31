@@ -85,11 +85,11 @@ let branch_state (state : state) : (state * state) option =
   if state.available_list |> List.length  = 0 then None 
   else if  state.available_list |> List.length  = 1 then
       let first_avail = state.available_list |> List.hd in
-      let first_int = Some (List.hd first_avail.possible) in
+      let first_guess = Some (List.hd first_avail.possible) in
       let (x, y) = first_avail.loc in
-      let new_random_grid1 = insert_into_a_grid state.current_grid x y first_int in
+      let new_random_grid = insert_into_a_grid state.current_grid x y first_guess in
       (* V tem primeru je itak že rešen sudoku*)
-      Some ({state with current_grid = new_random_grid1; available_list = []}, {state with available_list = []})
+      Some ({state with current_grid = new_random_grid; available_list = []}, {state with available_list = []})
   else  
     let trivialy_corrected = state.current_grid |> solve_trivial_cells in
     (* Če imamo kake trivialne številke, potem preučuje samo to možnost*)
@@ -102,6 +102,7 @@ let branch_state (state : state) : (state * state) option =
       let (x, y) = first_avail.loc in
       let first_guess = Some (List.hd first_avail.possible) in
       let second_guess = Some (List.hd (List.tl first_avail.possible)) in
+      (* Se da tukaj morda vpeljati kak while? Da se vedno takoj znebimo trivialnih?*)
       let new_grid1 = insert_into_a_grid state.current_grid x y first_guess |> solve_trivial_cells in
       let new_grid2 = insert_into_a_grid state.current_grid x y second_guess |> solve_trivial_cells in
       let new_available_list1 = new_grid1 |> get_available_list_from_grid |> nonzeroAvailables |> orderAvailablesByPossible in
