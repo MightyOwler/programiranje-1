@@ -1,8 +1,8 @@
 type available = { loc : int * int; possible : int list}
 
-(* TODO: tip stanja ustrezno popravite, saj boste med reševanjem zaradi učinkovitosti
-   želeli imeti še kakšno dodatno informacijo *)
-type state = { problem : Model.problem; current_grid : int option Model.grid; available_grid: available Model.grid }
+(* TODO: V resnici tako kot sem naredil ni najbolj smiselno, dosti bolje bi bilo imeti available_list, saj tip avaiblable že poskrbi, da imamo znano koordinato.
+   Potem lahko namesto da se mučim z available gridom samo manjšam list in tudi preverjam glede na ta list.*)
+type state = { problem : Model.problem; current_grid : int option Model.grid; available_list: available list}
 
 (* Pogledamo, ali je vstavljanje števila na določeno koordinato mreže legalno*)
 let check_number_legality (grid : int option Model.grid) row_ind col_ind n =
@@ -21,24 +21,30 @@ let coords_to_available row_ind col_ind (grid : int option Model.grid) (n : int 
 (* To zdaj dela. 
 # check_number_legality Model.test_option_grid 5 5 5;;
 - : bool = false *)
+  
 
-let get_available_grid (grid : int option Model.grid) =
+(* Tole bom verjetno kar poradiral, ali pa morda ne še zdaj. *)
+let get_available_list_from_grid (grid : int option Model.grid) =
   let foldaj row_ind col_ind (n : int option) (acc : available list) = 
     acc @ [(coords_to_available row_ind col_ind grid n)]
   in
-    Model.list_to_grid (Model.foldi_grid foldaj grid [])
+    Model.foldi_grid foldaj grid []
 
-let match_trivial (n : int option) (avail : available) =
-  match n, avail.possible with
-  | Some x, _ -> Some x
-  | _, []  -> None
-  | _, [x] -> Some x
-  | _ -> None
+  (* singularAvailables je mišljeno availabli, ki imajo singleton v possible parametru. *)
+let singularAvailables availableList = List.filter (fun x -> List.length x.possible = 1) availableList
 
+let insert_into_a_grid (grid : int option Model.grid) row_ind col_ind value =
+  let new_grid = Model.copy_grid grid in
+    (new_grid).(row_ind).(col_ind) <- value;
+  new_grid
+
+  (* Če bom spremenil na available_list, bo treba to popraviti. Še vedno pa je smisleno obdržati listified_current*)
 let solve_trivial_cells (grid : int option Model.grid) =
-  let listified_current = Model.grid_to_list grid in
-  let listified_available = Model.grid_to_list (get_available_grid grid) in
-  Model.list_to_grid (List.map2 match_trivial listified_current listified_available)
+  let singular_availables = grid |> get_available_list_from_grid |> singularAvailables in
+  List.map (fun avail ->
+    let (prvi, drugi) = avail.loc in
+   insert_into_a_grid grid prvi drugi  (Some (List.hd avail.possible))) singular_availables
+  (* Model.list_to_grid (List.map2 match_trivial listified_current listified_available) *)
 
   (* Vzamemo nek grid, ki ga dobimo iz state.current_grid, in mu zapolnimo trivialne celice.*)
 
@@ -50,7 +56,7 @@ let print_state (state : state) : unit =
 type response = Solved of Model.solution | Unsolved of state | Fail of state
 
 let initialize_state (problem : Model.problem) : state =
-  { current_grid = Model.copy_grid problem.initial_grid; problem; available_grid = get_available_grid problem.initial_grid}
+  { current_grid = Model.copy_grid problem.initial_grid; problem; available_list = get_available_list_from_grid problem.initial_grid}
 
 let validate_state (state : state) : response =
   let unsolved =
