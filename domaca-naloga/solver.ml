@@ -33,18 +33,30 @@ let get_available_list_from_grid (grid : int option Model.grid) =
   (* singularAvailables je mišljeno availabli, ki imajo singleton v possible parametru. *)
 let singularAvailables availableList = List.filter (fun x -> List.length x.possible = 1) availableList
 
-let insert_into_a_grid (grid : int option Model.grid) row_ind col_ind value =
+(* Tole funkcijo je treba popraviti do te mere, da najprej po vrsti uredi available, glede na dolžino possible parametra. V bistvu to lahko naredimo na vsakem koraku*)
+let nonzeroAvailables availableList = List.filter (fun x -> List.length x.possible > 0) availableList
+
+let rec orderAvailablesByPossible lst = 
+  match lst with
+  | [] -> []
+  | hd::tl -> 
+      let left = orderAvailablesByPossible (List.filter (fun x -> List.length x.possible < List.length hd.possible) tl) in
+      let right = orderAvailablesByPossible (List.filter (fun x -> List.length x.possible >= List.length hd.possible) tl) in
+      left @ [hd] @ right;;
+
+let insert_into_a_grid grid row_ind col_ind value =
   let new_grid = Model.copy_grid grid in
     (new_grid).(row_ind).(col_ind) <- value;
   new_grid
 
   (* Če bom spremenil na available_list, bo treba to popraviti. Še vedno pa je smisleno obdržati listified_current*)
-let solve_trivial_cells (grid : int option Model.grid) =
+let solve_trivial_cells grid =
   let singular_availables = grid |> get_available_list_from_grid |> singularAvailables in
-  List.map (fun avail ->
+  if singular_availables = [] then grid 
+  else
+  List.hd (List.map (fun avail ->
     let (prvi, drugi) = avail.loc in
-   insert_into_a_grid grid prvi drugi  (Some (List.hd avail.possible))) singular_availables
-  (* Model.list_to_grid (List.map2 match_trivial listified_current listified_available) *)
+   insert_into_a_grid grid prvi drugi  (Some (List.hd avail.possible))) singular_availables)
 
   (* Vzamemo nek grid, ki ga dobimo iz state.current_grid, in mu zapolnimo trivialne celice.*)
 
@@ -56,7 +68,7 @@ let print_state (state : state) : unit =
 type response = Solved of Model.solution | Unsolved of state | Fail of state
 
 let initialize_state (problem : Model.problem) : state =
-  { current_grid = Model.copy_grid problem.initial_grid; problem; available_list = get_available_list_from_grid problem.initial_grid}
+  { current_grid = Model.copy_grid problem.initial_grid; problem; available_list = problem.initial_grid |> get_available_list_from_grid |> nonzeroAvailables |> orderAvailablesByPossible}
 
 let validate_state (state : state) : response =
   let unsolved =
@@ -77,12 +89,32 @@ let branch_state (state : state) : (state * state) option =
      za začetek ni treba zapravljati preveč časa, saj ne bo nujno prišla v poštev. *)
 
   (* Tole se gotovo da izboljšati. Zaenkrat niti še ne dela prav, treba bo še dosti popraviti. Namreč če je enaka, bo treba insertati kar eno vrednost. *)
-  let trivialy_corrected = solve_trivial_cells state.current_grid in
-  if state.current_grid != trivialy_corrected then
-    Some ({state with current_grid = trivialy_corrected; available_grid = get_available_grid trivialy_corrected}, {state with available_grid = get_available_grid trivialy_corrected})
-  else
-    (* Tukaj lahko dam None v primeru, ko je pogoj izpoljnen, vendar ni pravilna rešitev*)
-    Some ({state with current_grid = trivialy_corrected; available_grid = (Model.copy_grid state.available_grid)}, {state with available_grid = (Model.copy_grid state.available_grid)})
+  if state.available_list |> List.length  = 0 then None 
+  else if  state.available_list |> List.length  = 1 then
+      let first_avail = state.available_list |> List.hd in
+      let first_int = Some (List.hd first_avail.possible) in
+      let (x, y) = first_avail.loc in
+      let new_available_list1 = state.available_list |> List.tl |> nonzeroAvailables |> orderAvailablesByPossible in
+      let new_random_grid1 = insert_into_a_grid state.current_grid x y first_int in
+      (* Ena možnost je potem itak brezvezna*)
+      Some ({state with current_grid = new_random_grid1; available_list = new_available_list1}, {state with available_list = []})
+  else  
+    let trivialy_corrected = state.current_grid |> solve_trivial_cells in
+    (* Če imamo kake trivialne številke, potem preučuje samo to možnost*)
+    if state.current_grid != trivialy_corrected then
+      Some ({state with current_grid = trivialy_corrected; available_list = trivialy_corrected |> get_available_list_from_grid |> nonzeroAvailables}, {state with available_list = []})
+    
+    else
+      (* Tukaj lahko dam None v primeru, ko je pogoj izpolnjen, vendar ni pravilna rešitev*)
+      let first_avail = trivialy_corrected |> get_available_list_from_grid |> nonzeroAvailables |> orderAvailablesByPossible |> List.hd in
+      let (x, y) = first_avail.loc in
+      let first_int = Some (List.hd first_avail.possible) in
+      let second_int = Some (List.hd (List.tl first_avail.possible)) in
+      let new_grid1 = insert_into_a_grid trivialy_corrected x y first_int in
+      let new_grid2 = insert_into_a_grid trivialy_corrected x y second_int in
+      let new_available_list1 = new_grid1 |> get_available_list_from_grid |> nonzeroAvailables |> orderAvailablesByPossible in
+      let new_available_list2 = new_grid2 |> get_available_list_from_grid |> nonzeroAvailables |> orderAvailablesByPossible in
+      Some ({state with current_grid = new_grid1; available_list = new_available_list1}, {state with current_grid = new_grid2; available_list = new_available_list2})
 
 
 (* pogledamo, če trenutno stanje vodi do rešitve *)
