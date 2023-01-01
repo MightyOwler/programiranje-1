@@ -54,60 +54,17 @@ let solve_trivial_cells grid =
 
   (* Vzamemo nek grid, ki ga dobimo iz state.current_grid, in mu zapolnimo trivialne celice.*)
 
-
-  (* To vzame nek available in najde njegove najbolj ustrezne elemente*)
-(* let find_best_possible grid avail_element = 
-  let (x_loc, y_loc) = avail_element.loc in
-  let ordered_list = 
-  List.sort (fun m n -> 
-    let m_score = insert_into_a_grid grid x_loc y_loc (Some m) |> get_available_list_from_grid |> List.length in
-    let n_score = insert_into_a_grid grid x_loc y_loc (Some n) |> get_available_list_from_grid |> List.length in 
-  m_score - n_score) avail_element.possible in
-  match ordered_list with
-  | (x :: y :: xs) -> (Some x, Some y)
-  | _ -> failwith "Do tega sploh ne bi smelo priti, saj imamo v tem primeru trivialne available" *)
-
-(* Ta zgornja funckija izgleda samo napačna *)
-
-
-(* Vzame available list in vrne dolžino najkrajšega possible parametra. Namreč hočemo, da bo ta dolžina čim manjša. *)
 let min_possible_length lst =
-  List.fold_left (fun acc a -> min acc (List.length a.possible)) max_int lst;;
+  List.fold_left (fun acc a -> min acc (List.length a.possible)) max_int lst
 
-let find_best_avails grid avail_list = 
-    (* Problem je sledeč: če imamo available s 3 possibli, se lahko zgodi, da vzamemo 2 in ne pridemo do konca. Torej moramo poskrbeti, da imamo zares različna availabla!!*)
-    (* Zdaj mi je postalo vse jasno! 
-       Če imamo kak available z dolžino possible 2, lahko takoj razrešimo na 2 primera. Sicer moramo biti pazljivi!! Namreč moramo razvejiti tako, da zmanjšamo avail list!*)
-
+let find_best_avails avail_list = 
+  (* Če imamo kak available z dolžino possible 2, lahko takoj razrešimo na 2 primera. Sicer moramo biti pazljivi!! Namreč moramo razvejiti tako, da zmanjšamo avail list!*)
     match List.sort (fun avail1 avail2 -> 
       let len_possible1 = avail1.possible |> List.length in
       let len_possible2 = avail2.possible |> List.length in
       min len_possible1 len_possible2) avail_list with
-      | x :: y :: xs -> if (List.length x.possible) = 2 then (x,y) else (x, x)
+      | x :: y :: xs -> if (min_possible_length avail_list) = 2 then (x,x) else (x, y)
       | _ -> failwith "Do tega ne more priti, ker imamo vedno vsaj 2"
-
-
-  (* let ordered_list = 
-    List.sort (fun avail1 avail2 -> min (avail1.possible |> List.length) (avail2.possible |> List.length)) avail_list in
-
-
-      let m_score = insert_into_a_grid grid x y (Some m) |> solve_trivial_cells |> get_available_list_from_grid |> min_possible_length in
-      let n_score = insert_into_a_grid grid x' y' (Some n) |> solve_trivial_cells|> get_available_list_from_grid |> min_possible_length in 
-    m_score - n_score) list_of_tuples in
-    match ordered_list with
-  | ((x, m) :: (y, n) :: xs) -> ({loc = x; possible = [m]}, {loc = y; possible = [n]})
-  | _ -> failwith "Do tega sploh ne bi smelo priti, saj imamo v tem primeru trivialne available" *)
-  
-(* let find_best_guesses grid avail_list = match avail_list with
-  | [] -> failwith "To se ne more zgoditi, available list nikoli nima praznih"
-  | x :: [] -> find_best_possible_list grid [x]
-  (* V tem primeru je samo treba najti najboljša elementa, po predpostavkah res imamo dva taka elementa *)
-  | x :: y :: xs -> let optimal_length = x.possible |> List.length in
-    let opt_availables = List.filter (fun x -> List.length x.possible = optimal_length) avail_list in
-    match opt_availables |> List.length with
-    | 1 -> find_best_possible_list grid [x]
-    | _ -> find_best_possible_list grid avail_list  *)
-
 
 let print_state (state : state) : unit =
   Model.print_grid
@@ -137,9 +94,9 @@ let branch_state (state : state) : (state * state) option = match state.availabl
       let first_avail = state.available_list |> List.hd in
       let first_guess = Some (List.hd first_avail.possible) in
       let (x, y) = first_avail.loc in
-      let new_random_grid = insert_into_a_grid state.current_grid x y first_guess in
+      let new_grid = insert_into_a_grid state.current_grid x y first_guess in
   (* V tem primeru je itak že rešen sudoku*)
-      Some ({state with current_grid = new_random_grid; available_list = []}, {state with available_list = []})
+      Some ({state with current_grid = new_grid; available_list = []}, {state with available_list = []})
 | _ ->
      (* Če imamo vsaj 2 availabla*)
     let trivialy_corrected = state.current_grid |> solve_trivial_cells in
@@ -148,29 +105,28 @@ let branch_state (state : state) : (state * state) option = match state.availabl
       (* V tem primeru samo vstavimo trivialne, ni treba razvejevati*)
       Some ({state with current_grid = trivialy_corrected; available_list = trivialy_corrected |> get_available_list_from_grid }, {state with available_list = []})
     else
-      (* Zakaj vzamemo first avail? To je treba dati v pomožno funckijo!! In sicer: pogledamo tiste z najmanjšim avail.possible in izmed tistih najdemo najbolj ugodnega!*)
-      let (first_avail, second_avail) = state.available_list |> find_best_avails state.current_grid in
+      let (first_avail, second_avail) = state.available_list |> find_best_avails in
       let (x, y) = first_avail.loc in
       let first_guess = Some (first_avail.possible |> List.hd) in
       let new_grid1 = insert_into_a_grid state.current_grid x y first_guess |> solve_trivial_cells in
 
       let new_available_list1 = new_grid1 |> get_available_list_from_grid in
       match first_avail = second_avail with
-        | true ->        
-          let new_possible = first_avail.possible |> List.tl in
-          let new_available_list2 = match state.available_list with
-          | x :: xs -> {x with possible = new_possible} :: xs
-          | _ -> [] (* Do tega itak ne pride*)
-            in
-          Some ({state with current_grid = new_grid1; available_list = new_available_list1}, {state with available_list = new_available_list2})
-        | false ->
-          let (x', y') = second_avail.loc in
-          let second_guess = Some (second_avail.possible |> List.hd) in
-          let new_grid2 = insert_into_a_grid state.current_grid x' y' second_guess |> solve_trivial_cells in
-          let new_available_list2 = new_grid2 |> get_available_list_from_grid in
+      | true ->
+        let (x', y') = second_avail.loc in
+        let second_guess = Some (second_avail.possible |>  List.rev |> List.hd) in
+        let new_grid2 = insert_into_a_grid state.current_grid x' y' second_guess |> solve_trivial_cells in
+        let new_available_list2 = new_grid2 |> get_available_list_from_grid in
 
-          (* Verjetno se da optimizirazi z memoizacijo.*)
-        Some ({state with current_grid = new_grid1; available_list = new_available_list1}, {state with current_grid = new_grid2; available_list = new_available_list2})
+         Some ({state with current_grid = new_grid1; available_list = new_available_list1}, {state with current_grid = new_grid2; available_list = new_available_list2})
+      | false -> (* V tem primeru moramo en possible odstraniti. *)
+        let new_possible = first_avail.possible |> List.tl in
+        let new_available_list2 = match state.available_list with
+        | x :: xs -> {x with possible = new_possible} :: xs
+        | _ -> [] (* Do tega itak ne pride*)
+          in
+        Some ({state with current_grid = new_grid1; available_list = new_available_list1}, {state with available_list = new_available_list2})
+        
 
 (* pogledamo, če trenutno stanje vodi do rešitve *)
 let rec solve_state (state : state) =
