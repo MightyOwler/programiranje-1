@@ -54,16 +54,10 @@ let solve_trivial_cells grid =
 
   (* Vzamemo nek grid, ki ga dobimo iz state.current_grid, in mu zapolnimo trivialne celice.*)
 
-let min_possible_length lst =
-  List.fold_left (fun acc a -> min acc (List.length a.possible)) max_int lst
-
 let find_best_avails avail_list = 
   (* Če imamo kak available z dolžino possible 2, lahko takoj razrešimo na 2 primera. Sicer moramo biti pazljivi!! Namreč moramo razvejiti tako, da zmanjšamo avail list!*)
-    match List.sort (fun avail1 avail2 -> 
-      let len_possible1 = avail1.possible |> List.length in
-      let len_possible2 = avail2.possible |> List.length in
-      min len_possible1 len_possible2) avail_list with
-      | x :: y :: xs -> if (min_possible_length avail_list) = 2 then (x,x) else (x, y)
+      match orderAvailablesByPossible avail_list with
+      | x :: y :: xs -> if (x.possible |> List.length) = 2 then (x,x) else (x, y)
       | _ -> failwith "Do tega ne more priti, ker imamo vedno vsaj 2"
 
 let print_state (state : state) : unit =
@@ -109,13 +103,12 @@ let branch_state (state : state) : (state * state) option = match state.availabl
       let (x, y) = first_avail.loc in
       let first_guess = Some (first_avail.possible |> List.hd) in
       let new_grid1 = insert_into_a_grid state.current_grid x y first_guess |> solve_trivial_cells in
-
       let new_available_list1 = new_grid1 |> get_available_list_from_grid in
+
       match first_avail = second_avail with
       | true ->
-        let (x', y') = second_avail.loc in
         let second_guess = Some (second_avail.possible |>  List.rev |> List.hd) in
-        let new_grid2 = insert_into_a_grid state.current_grid x' y' second_guess |> solve_trivial_cells in
+        let new_grid2 = insert_into_a_grid state.current_grid x y second_guess |> solve_trivial_cells in
         let new_available_list2 = new_grid2 |> get_available_list_from_grid in
 
          Some ({state with current_grid = new_grid1; available_list = new_available_list1}, {state with current_grid = new_grid2; available_list = new_available_list2})
