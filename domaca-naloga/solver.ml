@@ -4,6 +4,11 @@ type available = { loc : int * int; possible : int list}
    Potem lahko namesto da se mučim z available gridom samo manjšam list in tudi preverjam glede na ta list.*)
 type state = { problem : Model.problem; current_grid : int option Model.grid; available_list: available list}
 
+let states_table = Hashtbl.create 100;;
+let cached_state (state : state) = 
+  Hashtbl.add states_table state (); 
+  if (Hashtbl.mem states_table state) then false else true
+
 (* Pogledamo, ali je vstavljanje števila na določeno koordinato mreže legalno*)
 let check_number_legality (grid : int option Model.grid) row_ind col_ind n =
   [Model.get_row grid row_ind; Model.get_column grid col_ind;
@@ -81,7 +86,10 @@ let validate_state (state : state) : response =
     if Model.is_valid_solution state.problem solution then Solved solution
     else Fail state
 
-let branch_state (state : state) : (state * state) option = match state.available_list |> List.length with
+
+let branch_state (state : state) : (state * state) option = 
+  if cached_state state then None else
+  match state.available_list |> List.length with
 | 0 -> None
 | 1 -> 
   (* Razdelimo glede na dolžino available_lista. *)
