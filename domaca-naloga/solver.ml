@@ -41,10 +41,29 @@ let coords_to_available row_ind col_ind grid (n : int option) =
 
 (* To bi bilo treba narediti prek available lista, ne pa grida! *)
   let grid_to_avail_list grid =
-  let foldaj row_ind col_ind (n : int option) (acc : available list) = 
-    (coords_to_available row_ind col_ind grid n) :: acc
+  let foldaj row_ind col_ind (n : int option) acc = 
+    let new_avail = coords_to_available row_ind col_ind grid n in
+    if new_avail.possible = [] then 
+    acc
+  else 
+    new_avail :: acc
   in
-    (Model.foldi_grid foldaj grid []) |> List.rev |> nonzeroAvailables
+    (Model.foldi_grid foldaj grid [])
+
+
+    (* Dela, ni pa tako optimalno kot bi si želel*)
+  let alt_grid_to_avail_list grid available_list =
+    let coords_list = List.map (fun x -> x.loc) available_list in
+    let rec aux acc locs_list = match locs_list with
+    | [] -> acc
+    | l :: locs-> let (x,y) = l in 
+      let new_possible = List.filter (fun n -> check_number_legality grid x y n) sudoku_numbers in
+      if new_possible = [] then
+        aux acc locs
+      else
+        aux ({loc= (x,y); possible = new_possible}:: acc) locs
+  in
+  aux [] coords_list
 
 let test_a_list = [{loc = (1, 2); possible = [1; 5; 3]}; {loc = (2, 3); possible = [2; 4; 3]}; {loc = (3, 6); possible = [3; 8; 1]}]
 
@@ -59,7 +78,7 @@ let findSmallestAvailable avail_list =
             in
   aux (avail_list |> List.hd) avail_list
 
-let avail_to_enumetated_avail avail_list = 
+(* let avail_to_enumetated_avail avail_list = 
   let rec aux acc = function
     | [] -> acc
     | x :: xs -> 
@@ -78,7 +97,7 @@ let findSmallestEnumeratedAvailable enum_avail_list =
           | k when k < (smallest.coords_list |> List.length) -> aux x xs
           | _ -> aux smallest xs
             in
-  aux (enum_avail_list |> List.hd) enum_avail_list
+  aux (enum_avail_list |> List.hd) enum_avail_list *)
 
 let insert_into_a_grid grid row_ind col_ind value =
   let new_grid = Model.copy_grid grid in
@@ -131,43 +150,44 @@ let branch_state (state : state) : (state * state) option =
 | _ ->
     (* Če imamo vsaj 2 availabla*)
     (* Če imamo kake trivialne številke, potem preučuje samo to možnost*)
-    if (state.available_list |> List.length) != (state.available_list |> remove_singular_availables |> List.length) then
+    let trivialy_corrected = solve_trivial_cells state.current_grid state.available_list in
+    if trivialy_corrected != state.current_grid then
       (* V tem primeru samo vstavimo trivialne, ni treba razvejevati*)
-      let trivialy_corrected = solve_trivial_cells state.current_grid state.available_list in
+      
       Some ({state with current_grid = trivialy_corrected; available_list = trivialy_corrected |> grid_to_avail_list }, {state with available_list = []})
     else
         let first_avail = state.available_list |> findSmallestAvailable in
         let (x, y) = first_avail.loc in
         let first_guess = Some (first_avail.possible |> List.hd) in
         let new_grid_1 = insert_into_a_grid state.current_grid x y first_guess in
-        let new_available_list_1 = new_grid_1 |> grid_to_avail_list in
+        let new_available_list_1 = grid_to_avail_list new_grid_1 in
 
         match first_avail.possible |> List.length with
           | 2 ->
             let second_guess = Some (first_avail.possible |>  List.rev |> List.hd) in
             let new_grid_2 = insert_into_a_grid state.current_grid x y second_guess in
-            let new_available_list2 = new_grid_2 |> grid_to_avail_list in
+            let new_available_list2 = grid_to_avail_list new_grid_2 in
     
             Some ({state with current_grid = new_grid_1; available_list = new_available_list_1}, {state with current_grid = new_grid_2; available_list = new_available_list2})
           | _ -> (* V tem primeru moramo en element parametra possible odstraniti. *)
 
           (* Tole enostavno ni najbolj optimalno, ne prihrani veliko časa*)
-          let opt = state.available_list |> avail_to_enumetated_avail |> findSmallestEnumeratedAvailable in
+          (* let opt = state.available_list |> avail_to_enumetated_avail |> findSmallestEnumeratedAvailable in
           let opt_digit = Some opt.digit in
           let coords_lst = opt.coords_list in
           match List.length coords_lst with
           | 1 ->
-            let (x, y) = List.hd coords_lst in
+            let x, y = List.hd coords_lst in
             let new_grid = insert_into_a_grid state.current_grid x y opt_digit in
-            Some ({state with current_grid = new_grid; available_list = new_grid |> grid_to_avail_list }, {state with available_list = []})
+            Some ({state with current_grid = new_grid; available_list = alt_grid_to_avail_list new_grid state.available_list }, {state with available_list = []})
           | 2 ->
-            let (x_1, y_1) = List.hd coords_lst in
-            let (x_2, y_2) = coords_lst |> List.rev |> List.hd in
+            let x_1, y_1 = List.hd coords_lst in
+            let x_2, y_2 = coords_lst |> List.rev |> List.hd in
             let new_grid_1 = insert_into_a_grid state.current_grid x_1 y_1 opt_digit in
             let new_grid_2 = insert_into_a_grid state.current_grid x_2 y_2 opt_digit in
-            Some ({state with current_grid = new_grid_1; available_list = new_grid_1 |> grid_to_avail_list },
-            {state with current_grid = new_grid_2; available_list = new_grid_2 |> grid_to_avail_list })
-          | _ -> 
+            Some ({state with current_grid = new_grid_1; available_list = alt_grid_to_avail_list new_grid_1 state.available_list },
+            {state with current_grid = new_grid_2; available_list = alt_grid_to_avail_list new_grid_2 state.available_list })
+          | _ ->  *)
 
           let new_available_list_2 = match state.available_list with
           | x :: xs -> {x with possible = first_avail.possible |> List.tl} :: xs
