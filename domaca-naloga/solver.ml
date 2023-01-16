@@ -11,12 +11,12 @@ let cached_state (state : state) =
 let test_grid = Model.list_to_grid (Model.random_int_list 81);;
 let test_option_grid = [|[|None; Some 6; Some 6; Some 2; Some 4; Some 1; Some 2; Some 5; Some 4|];
 [|Some 1; Some 2; Some 7; Some 5; Some 7; Some 3; Some 4; Some 7; Some 2|];
-[|Some 8; Some 2; Some 7; Some 4; Some 7; Some 7; Some 8; Some 4; Some 2|];
+[|Some 8; Some 2; Some 7; Some 4; None; Some 7; Some 8; None; Some 2|];
 [|Some 2; Some 8; Some 3; Some 3; Some 8; Some 1; Some 6; Some 1; Some 3|];
-[|Some 5; Some 6; Some 4; Some 7; Some 4; Some 2; Some 7; Some 8; Some 8|];
-[|Some 7; Some 1; Some 5; Some 3; Some 5; Some 7; Some 2; Some 6; Some 3|];
-[|Some 4; Some 2; Some 4; Some 3; Some 2; Some 2; Some 7; Some 4; Some 4|];
-[|Some 5; Some 8; Some 6; Some 2; Some 6; Some 5; Some 7; Some 3; Some 2|];
+[|Some 5; Some 6; Some 4; None; Some 4; Some 2; Some 7; Some 8; Some 8|];
+[|Some 7; Some 1; Some 5; Some 3; Some 5; None; Some 2; Some 6; Some 3|];
+[|Some 4; Some 2; None; Some 3; Some 2; Some 2; Some 7; Some 4; Some 4|];
+[|Some 5; Some 8; Some 6; Some 2; None; Some 5; Some 7; Some 3; Some 2|];
 [|Some 7; Some 2; Some 4; Some 7; Some 1; Some 3; Some 5; Some 6; None|]|];;
 
 let nonzeroAvailables availableList = List.filter (fun x -> List.length x.possible > 0) availableList
@@ -50,22 +50,7 @@ let coords_to_available row_ind col_ind grid (n : int option) =
   in
     (Model.foldi_grid foldaj grid [])
 
-
-    (* Dela, ni pa tako optimalno kot bi si želel*)
-  let alt_grid_to_avail_list grid available_list =
-    let coords_list = List.map (fun x -> x.loc) available_list in
-    let rec aux acc locs_list = match locs_list with
-    | [] -> acc
-    | l :: locs-> let (x,y) = l in 
-      let new_possible = List.filter (fun n -> check_number_legality grid x y n) sudoku_numbers in
-      if new_possible = [] then
-        aux acc locs
-      else
-        aux ({loc= (x,y); possible = new_possible}:: acc) locs
-  in
-  aux [] coords_list
-
-let test_a_list = [{loc = (1, 2); possible = [1; 5; 3]}; {loc = (2, 3); possible = [2; 4; 3]}; {loc = (3, 6); possible = [3; 8; 1]}]
+let test_a_list = test_option_grid |> grid_to_avail_list
 
 let findSmallestAvailable avail_list = 
   let rec aux smallest = function
@@ -78,26 +63,6 @@ let findSmallestAvailable avail_list =
             in
   aux (avail_list |> List.hd) avail_list
 
-(* let avail_to_enumetated_avail avail_list = 
-  let rec aux acc = function
-    | [] -> acc
-    | x :: xs -> 
-      let number_list = List.filter (fun avail -> List.mem x avail.possible) avail_list in 
-      if number_list = [] then aux acc xs else
-      aux ({digit = x; coords_list = List.map (fun avail -> avail.loc) number_list} :: acc) xs
-  in
-  aux [] sudoku_numbers
-
-let findSmallestEnumeratedAvailable enum_avail_list = 
-  let rec aux smallest = function
-      | [] -> smallest
-      | x :: xs -> 
-          match x.coords_list |> List.length with
-          | 1 | 2 -> x
-          | k when k < (smallest.coords_list |> List.length) -> aux x xs
-          | _ -> aux smallest xs
-            in
-  aux (enum_avail_list |> List.hd) enum_avail_list *)
 
 let insert_into_a_grid grid row_ind col_ind value =
   let new_grid = Model.copy_grid grid in
@@ -150,11 +115,11 @@ let branch_state (state : state) : (state * state) option =
 | _ ->
     (* Če imamo vsaj 2 availabla*)
     (* Če imamo kake trivialne številke, potem preučuje samo to možnost*)
-    let trivialy_corrected = solve_trivial_cells state.current_grid state.available_list in
-    if trivialy_corrected != state.current_grid then
+    let trivially_corrected = solve_trivial_cells state.current_grid state.available_list in
+    if trivially_corrected != state.current_grid then
       (* V tem primeru samo vstavimo trivialne, ni treba razvejevati*)
       
-      Some ({state with current_grid = trivialy_corrected; available_list = trivialy_corrected |> grid_to_avail_list }, {state with available_list = []})
+      Some ({state with current_grid = trivially_corrected; available_list = trivially_corrected |> grid_to_avail_list }, {state with available_list = []})
     else
         let first_avail = state.available_list |> findSmallestAvailable in
         let (x, y) = first_avail.loc in
@@ -170,25 +135,6 @@ let branch_state (state : state) : (state * state) option =
     
             Some ({state with current_grid = new_grid_1; available_list = new_available_list_1}, {state with current_grid = new_grid_2; available_list = new_available_list2})
           | _ -> (* V tem primeru moramo en element parametra possible odstraniti. *)
-
-          (* Tole enostavno ni najbolj optimalno, ne prihrani veliko časa*)
-          (* let opt = state.available_list |> avail_to_enumetated_avail |> findSmallestEnumeratedAvailable in
-          let opt_digit = Some opt.digit in
-          let coords_lst = opt.coords_list in
-          match List.length coords_lst with
-          | 1 ->
-            let x, y = List.hd coords_lst in
-            let new_grid = insert_into_a_grid state.current_grid x y opt_digit in
-            Some ({state with current_grid = new_grid; available_list = alt_grid_to_avail_list new_grid state.available_list }, {state with available_list = []})
-          | 2 ->
-            let x_1, y_1 = List.hd coords_lst in
-            let x_2, y_2 = coords_lst |> List.rev |> List.hd in
-            let new_grid_1 = insert_into_a_grid state.current_grid x_1 y_1 opt_digit in
-            let new_grid_2 = insert_into_a_grid state.current_grid x_2 y_2 opt_digit in
-            Some ({state with current_grid = new_grid_1; available_list = alt_grid_to_avail_list new_grid_1 state.available_list },
-            {state with current_grid = new_grid_2; available_list = alt_grid_to_avail_list new_grid_2 state.available_list })
-          | _ ->  *)
-
           let new_available_list_2 = match state.available_list with
           | x :: xs -> {x with possible = first_avail.possible |> List.tl} :: xs
           | _ -> assert false
