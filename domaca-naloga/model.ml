@@ -85,16 +85,7 @@ let print_grid string_of_cell grid =
 let list_to_grid list =
   list |> chunkify 9 |> List.map Array.of_list |> Array.of_list
 
-let test_grid = list_to_grid (random_int_list 81);;
-let test_option_grid = [|[|None; Some 6; Some 6; Some 2; Some 4; Some 1; Some 2; Some 5; Some 4|];
-[|Some 1; Some 2; Some 7; Some 5; Some 7; Some 3; Some 4; Some 7; Some 2|];
-[|Some 8; Some 2; Some 7; Some 4; Some 7; Some 7; Some 8; Some 4; Some 2|];
-[|Some 2; Some 8; Some 3; Some 3; Some 8; Some 1; Some 6; Some 1; Some 3|];
-[|Some 5; Some 6; Some 4; Some 7; Some 4; Some 2; Some 7; Some 8; Some 8|];
-[|Some 7; Some 1; Some 5; Some 3; Some 5; Some 7; Some 2; Some 6; Some 3|];
-[|Some 4; Some 2; Some 4; Some 3; Some 2; Some 2; Some 7; Some 4; Some 4|];
-[|Some 5; Some 8; Some 6; Some 2; Some 6; Some 5; Some 7; Some 3; Some 2|];
-[|Some 7; Some 2; Some 4; Some 7; Some 1; Some 3; Some 5; Some 6; None|]|];;
+
       
 (* Funkcije za dostopanje do elementov mreže *)
 
