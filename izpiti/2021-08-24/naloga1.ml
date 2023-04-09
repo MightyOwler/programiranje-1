@@ -4,6 +4,10 @@
   podana trojica celih števil urejena strogo naraščajoče.
 [*----------------------------------------------------------------------------*)
 
+let je_urejena trojica = 
+  let a, b, c = trojica in 
+  if a < b && b < c then true else false
+
 (* b *)
 (*----------------------------------------------------------------------------*]
   Napišite funkcijo `poskusi_deljenje : float option -> float option -> float option`, 
@@ -19,6 +23,12 @@
     - : float option = None
 [*----------------------------------------------------------------------------*)
 
+let poskusi_deljenje n k = 
+  match n, k  with
+  | _, Some 0.0 -> None
+  | Some n, Some k -> Some(n /. k)
+  | _ -> None
+
 (* c *)
 (*----------------------------------------------------------------------------*]
   Definirajte funkcijo `zavrti : 'a list -> int -> 'a list`, ki seznam zavrti 
@@ -28,6 +38,15 @@
     # zavrti [1; 2; 3; 4; 5] 2;;
     - : int list = [3; 4; 5; 1; 2]
 [*----------------------------------------------------------------------------*)
+
+let zavrti list n = 
+  let rec aux acc lst = function
+  | 0 -> lst @ (List.rev acc)
+  | k -> match lst with 
+    | x :: xs -> aux (x :: acc) xs (k -1)
+    | _ -> assert false
+in 
+aux [] list (n mod (List.length list))
 
 (* d *)
 (*----------------------------------------------------------------------------*]
@@ -41,3 +60,13 @@
     # razdeli ((-) 3) [1; 2; 3; 4; 5; 6];;
     - : int list * int list * int list = ([4; 5; 6], [3], [1; 2])
 [*----------------------------------------------------------------------------*)
+
+let razdeli f list = 
+  let rec aux acc1 acc2 acc3 = function
+  | [] -> (List.rev acc3, List.rev acc2, List.rev acc1)
+  | x :: xs -> match f x with
+  | 0 -> aux acc1 (x :: acc2) acc3 xs
+  | k when k > 0 -> aux (x :: acc1) acc2 acc3 xs
+  | _ -> aux acc1 acc2 (x :: acc3) xs
+in
+aux [] [] [] list

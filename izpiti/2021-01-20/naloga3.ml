@@ -24,6 +24,26 @@
 [*----------------------------------------------------------------------------*)
 
 
+let max_of_list list =
+  let rec aux max = function
+  | [] -> max
+  | x :: xs -> if x > max then aux x xs else aux max xs
+in
+aux (list |> List.hd) list
+
+
+let najdaljsa_pot list = 
+  let rec aux acc subacc = function
+  | [] -> subacc :: acc
+  | x :: xs -> if x < List.hd subacc then aux (subacc :: acc) [x] xs else aux acc (x :: subacc) xs
+  in
+  max_of_list (List.map (fun lst -> (lst |> List.hd) - (lst |> List.rev |> List.hd)) (aux [] [List.hd list] list))
+
+  (* Enkrat se gremo čez seznam, da ustvarimo nove sezname. To je vse konstantno. Nato izračunamo razliko med največjo in najmanjšo komponento v seznamih. To je linearno. Poleg tega je linearen maksimum na seznamih
+     Torej imamo v resnici O(n).
+  *)
+
+
 (* b *)(*----------------------------------------------------------------------------*]
   Prejšnjo rešitev prilagodite tako, da vrne zgolj indeksa teh dveh točk. Pri
   tem poskrbite, da ne pokvarite časovne zahtevnosti v `O` notaciji.

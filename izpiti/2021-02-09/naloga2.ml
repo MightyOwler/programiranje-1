@@ -41,19 +41,21 @@ type ('a, 'b) lexi_tree = ('a * 'b tree) tree
   Definirajte primer, ki ustreza zgornjemu leksikografskemu drevesu.
 
 [*============================================================================*)
-let leaf a = Node (Empty, a, Empty)
+let leaf x = Node(Empty, x, Empty)
 
 let three_subtree = Node (Empty, "g", leaf "t")
 let seven_subtree = leaf "a"
-let ten_subtree = Node (leaf "e", "r", Node(leaf "t", "z", Empty))
+let ten_subtree = Node(leaf "e", "r", Node(leaf "t", "z", Empty))
 
 let test_tree : (int, string) lexi_tree = 
-  Node (leaf (3, three_subtree), (7, seven_subtree), leaf (10, ten_subtree))
+  Node(leaf (3, three_subtree), (7, seven_subtree), leaf (10, ten_subtree))
 
 (* b *)
 (*============================================================================*]
   Napišite funkcijo, ki preveri ali je par prisoten v leksikografskem drevesu.
 [*============================================================================*)
+
+(* Najprej napišeš pomožno funckijo, ki preveri, če je element v drevesu*)
 let rec mem a = function
   | Empty -> false
   | Node (lt, x, rt) when x = a -> true

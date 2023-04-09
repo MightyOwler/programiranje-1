@@ -48,12 +48,21 @@ let primer =
   spremenljivk v izrazu.
 [*----------------------------------------------------------------------------*)
 
+
 (* b *)
 (*----------------------------------------------------------------------------*]
 Napišite funkcijo `izlusci : 'a izraz -> (string * int) slovar`, ki sprejme izraz 
 in vrne slovar, ki pove, kolikokrat se posamezna spremenljivka pojavi v izrazu. 
 Vrstni red v slovarju ni pomemben.
 [*----------------------------------------------------------------------------*)
+
+let izlusci izraz = 
+  let rec aux acc izr =
+    match izr with
+    | Spremenljivka x -> aux (dodaj (Spremenljivka x) acc) izr 
+    | Konstanta _ -> 0
+    | Operacija (l, _, d) -> aux l + aux d  
+
 
 (* c *)
 (*----------------------------------------------------------------------------*]

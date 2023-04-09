@@ -16,10 +16,13 @@ type 'a vsebina_kuhinje =
   "toast", "sok" in "ragu".
 [*----------------------------------------------------------------------------*)
 
+(* Primer vsotnega tipa *)
 let kuhinja = 
-    [ Ponev("tuna"); 
-      Lonec("brokoli", "mango"); 
-      Omara(["sir"; "toast"; "sok"; "ragu"]) ]
+  [Ponev("tuna");
+  Lonec(("brokoli", "mango"));
+  Omara(["sir";
+  "toast"; "sok"; "ragu"])
+  ]
 
 (* b *)
 (*----------------------------------------------------------------------------*]
@@ -28,13 +31,14 @@ let kuhinja =
   vrnila 7.
 [*----------------------------------------------------------------------------*)
 
-let rec prestej kuhinja =
-  let kolicina = function
-    | Ponev _ -> 1
-    | Lonec _ -> 2
-    | Omara l -> List.length l
-  in
-  List.fold_left (fun acc x -> acc + kolicina x) 0 kuhinja
+let prestej kuhinja =
+  let stevilo = function
+  | Ponev _ -> 1
+  | Lonec _ -> 2
+  | Omara lst -> List.length lst
+in
+List.fold_left (fun acc x -> acc + stevilo x) 0 kuhinja
+
 
 (* c *)
 (*----------------------------------------------------------------------------*]
@@ -48,7 +52,7 @@ let rec prestej kuhinja =
 let rec pretvori f = function
   | Ponev x -> Ponev (f x)
   | Lonec (x, y) -> Lonec (f x, f y)
-  | Omara xs -> Omara (List.map f xs)
+  | Omara lst -> Omara (List.map f lst)
 
 (* d *)
 (*----------------------------------------------------------------------------*]
@@ -60,13 +64,13 @@ let rec pretvori f = function
 
 [*----------------------------------------------------------------------------*)
 
-let rec pospravi kuhinja =
-  let rec collect acc = function
-    | Ponev x -> (x::acc)  
-    | Lonec (x, y) -> (x::y::acc)  
-    | Omara xs -> (List.fold_left (fun acc x -> x :: acc) acc xs)
-  in
-  Omara (List.fold_left collect [] kuhinja)
+let pospravi kuhinja =
+  let pridobi_iz_elementa = function
+  | Ponev x-> [x]
+  | Lonec (x, y) -> [x; y]
+  | Omara lst -> lst
+in
+  Omara (List.fold_left (fun acc x -> acc @ pridobi_iz_elementa x) [] kuhinja)
 
 (* e *)
 (*----------------------------------------------------------------------------*]
