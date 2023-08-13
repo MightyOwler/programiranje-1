@@ -1,9 +1,9 @@
 type available = { loc : int * int; possible : int list}
 type enumerated_avialable_list = { digit : int; coords_list : (int * int) list}
-type state = { problem : Model.problem; current_grid : int option Model.grid; available_list: available list}
+type state = { problem : Model.problem; current_grid : int option Model.grid; available_list: available list; konec : bool}
 let sudoku_numbers = [1; 2; 3; 4; 5; 6; 7; 8; 9]
 
-let example_available_list = [
+(* let example_available_list = [
     { loc = (0, 0); possible = [1; 2; 3] };
     { loc = (0, 1); possible = [1; 4] };
     { loc = (0, 2); possible = [5] };
@@ -14,14 +14,14 @@ let example_available_list = [
     { loc = (2, 1); possible = [6; 8] };
     { loc = (2, 2); possible = [2; 9] };
     { loc = (3, 0); possible = [3; 5; 7] }
-]
+] *)
 
 let states_table = Hashtbl.create 1000;;
 let cached_state (state : state) = 
   Hashtbl.add states_table state (); 
   if (Hashtbl.mem states_table state) then false else true
 
-let test_grid = Model.list_to_grid (Model.random_int_list 81);;
+(* let test_grid = Model.list_to_grid (Model.random_int_list 81);;
 let test_option_grid = [|[|None; Some 6; Some 6; Some 2; Some 4; Some 1; Some 2; Some 5; Some 4|];
 [|Some 1; Some 2; Some 7; Some 5; Some 7; Some 3; Some 4; Some 7; Some 2|];
 [|Some 8; Some 2; Some 7; Some 4; None; Some 7; Some 8; None; Some 2|];
@@ -30,17 +30,14 @@ let test_option_grid = [|[|None; Some 6; Some 6; Some 2; Some 4; Some 1; Some 2;
 [|Some 7; Some 1; Some 5; Some 3; Some 5; None; Some 2; Some 6; Some 3|];
 [|Some 4; Some 2; None; Some 3; Some 2; Some 2; Some 7; Some 4; Some 4|];
 [|Some 5; Some 8; Some 6; Some 2; None; Some 5; Some 7; Some 3; Some 2|];
-[|Some 7; Some 2; Some 4; Some 7; Some 1; Some 3; Some 5; Some 6; None|]|];;
+[|Some 7; Some 2; Some 4; Some 7; Some 1; Some 3; Some 5; Some 6; None|]|];; *)
 
 
-(* Printaj available array *)
-let print_available_list arr =
-  Array.iter (fun av ->
-    let (x, y) = av.loc in
-    Printf.printf "Location: (%d, %d) | Possible: [" x y;
-    List.iter (fun p -> Printf.printf "%d; " p) av.possible;
-    print_endline "]"
-  ) arr
+let print_available_list avail_list =
+  List.iter (fun avail ->
+    let (x, y) = avail.loc in
+    Printf.printf "Location: (%d,%d), Possible: %s\n" x y (String.concat ", " (List.map string_of_int avail.possible))
+  ) avail_list
 
 let nonzeroAvailables availableList = List.filter (fun x -> List.length x.possible > 0) availableList
 
@@ -92,7 +89,7 @@ let has_singleton available_list =
 let filter_singletons available_list =
   List.filter (fun avl -> match avl.possible with | [_] -> true | _ -> false) available_list
 
-let test_a_list = test_option_grid |> grid_to_avail_list
+(* let test_a_list = test_option_grid |> grid_to_avail_list *)
 
 let findSmallestAvailable avail_list = 
   let rec aux smallest = function
@@ -125,29 +122,58 @@ let insert_into_grid grid (row_ind, col_ind) value =
   let update_available_list available_list loc value =
     List.map (remove_from_possible loc value) available_list
 
-    let apply_single_possible available_list =
-      let apply_single avl acc_list =
-        match avl.possible with
-        | [single_value] -> update_available_list acc_list avl.loc single_value
-        | _ -> acc_list
-      in
-      List.fold_right apply_single available_list available_list
+let extract_singletons available_list =
+  List.filter (fun avail -> List.length avail.possible = 1) available_list
+  |> List.map (fun avail -> avail.loc)
+let update_and_remove_singletons available_list =
+  let singletons = extract_singletons available_list in
+  let updated_list = 
+    List.fold_left 
+      (fun acc_list singleton_loc ->
+          let singleton_avail = List.find_opt (fun avl -> avl.loc = singleton_loc) available_list in
+          match singleton_avail with
+          | Some avl -> 
+              let value = match avl.possible with
+                | [v] -> v
+                | _ -> failwith "Not a singleton"
+              in
+              List.map (remove_from_possible singleton_loc value) acc_list
+          | None -> acc_list
+      ) 
+      available_list singletons
+  in
+  List.filter (fun avail -> not (List.mem avail.loc singletons)) updated_list
+    
+  let update_and_extract_singletons available_list =
+    let singletons = List.filter (fun avail -> List.length avail.possible = 1) available_list in
+    let singletons_data = List.map (fun avail -> (avail.loc, List.hd avail.possible)) singletons in
+    let updated_list = 
+      List.fold_left 
+        (fun acc_list (singleton_loc, value) ->
+          List.map (remove_from_possible singleton_loc value) acc_list
+        ) 
+        available_list singletons_data
+    in
+    (List.filter (fun avail -> not (List.mem_assoc avail.loc singletons_data)) updated_list, singletons_data)
   
-      let update_list_with_singletons available_list =
-        let singletons = filter_singletons available_list in
-        List.fold_left 
-          (fun acc_list singleton ->
-             let value = List.hd singleton.possible in
-             update_available_list acc_list singleton.loc value) 
-          available_list singletons
-  
+  (* Function to insert singletons into a given grid *)
+  let insert_singletons_into_grid grid singletons_data =
+    List.fold_left (fun current_grid (loc, value) -> insert_into_grid current_grid loc (Some value)) grid singletons_data
+
 (* Morda lahko nekoliko razširim trivialno reševanje... *)
-let solve_trivial_cells grid available_list=
+(* let solve_trivial_cells grid available_list=
   let singular_availables = available_list |> singularAvailables in
   if singular_availables = [] then grid 
   else
-  List.hd (List.map (fun avail ->  insert_into_grid grid avail.loc  (Some (List.hd avail.possible))) singular_availables)
+  List.hd (List.map (fun avail ->  insert_into_grid grid avail.loc  (Some (List.hd avail.possible))) singular_availables) *)
    
+  let solve_trivial_cells grid available_list =
+    let singular_availables = singularAvailables available_list in
+    if singular_availables = [] then grid
+    else
+        List.fold_left (fun current_grid avail -> 
+            insert_into_grid current_grid avail.loc (Some (List.hd avail.possible))
+        ) grid singular_availables
 
   (* Vzamemo nek grid, ki ga dobimo iz state.current_grid, in mu zapolnimo trivialne celice.*)
 
@@ -159,7 +185,7 @@ let print_state (state : state) : unit =
 type response = Solved of Model.solution | Unsolved of state | Fail of state
 
 let initialize_state (problem : Model.problem) : state =
-  { current_grid = Model.copy_grid problem.initial_grid; problem; available_list = problem.initial_grid |> grid_to_avail_list}
+  { current_grid = Model.copy_grid problem.initial_grid; problem; available_list = problem.initial_grid |> grid_to_avail_list |> nonzeroAvailables; konec = false}
 
 let validate_state (state : state) : response =
   let unsolved =
@@ -176,6 +202,7 @@ let validate_state (state : state) : response =
 let branch_state (state : state) : (state * state) option = 
   if cached_state state then None else
 
+  if state.konec then None else
 
   (* Razdelimo glede na dolžino available_lista. *)
   match state.available_list |> List.length with
@@ -196,8 +223,15 @@ let branch_state (state : state) : (state * state) option =
     if state.available_list |> has_singleton then
       (* V tem primeru samo vstavimo trivialne, ni treba razvejevati*)
       let trivially_corrected = solve_trivial_cells state.current_grid state.available_list in
-      print_endline "trivialno popravljam";
-      Some ({state with current_grid = trivially_corrected; available_list = trivially_corrected |> grid_to_avail_list|> nonzeroAvailables }, {state with available_list = []})
+      print_endline "Stara verzija -------------------------------------";
+      trivially_corrected |> grid_to_avail_list |> print_available_list;
+      print_endline "Nova verzija -------------------------------------";
+      state.available_list |> update_and_remove_singletons |> nonzeroAvailables |> print_available_list;
+      print_endline "---------------------------------------------------";
+      (* TODO Tukaj je treba odstraniti grid_to_avail_list *)
+      if (state.available_list |> update_and_remove_singletons) = [] then
+        Some ({state with current_grid = trivially_corrected; available_list = state.available_list |> update_and_remove_singletons |> nonzeroAvailables; konec = true}, {state with available_list = []})
+      else Some ({state with current_grid = trivially_corrected; available_list = state.available_list |> update_and_remove_singletons |> nonzeroAvailables }, {state with available_list = []})
     else
         let first_avail = state.available_list  |> findSmallestAvailable in
         let first_guess = Some (first_avail.possible |> List.hd) in
