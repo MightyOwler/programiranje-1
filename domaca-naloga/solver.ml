@@ -32,6 +32,11 @@ let test_option_grid = [|[|None; Some 6; Some 6; Some 2; Some 4; Some 1; Some 2;
 [|Some 5; Some 8; Some 6; Some 2; None; Some 5; Some 7; Some 3; Some 2|];
 [|Some 7; Some 2; Some 4; Some 7; Some 1; Some 3; Some 5; Some 6; None|]|];; *)
 
+let copy_available avail =
+  { loc = avail.loc; possible = List.map (fun x -> x) avail.possible }
+
+let copy_available_list available_list =
+  List.map copy_available available_list
 
 let print_available_list avail_list =
   List.iter (fun avail ->
@@ -119,8 +124,11 @@ let insert_into_grid grid (row_ind, col_ind) value =
     then {avail with possible = List.filter ((<>) value) avail.possible}
     else avail
   
-  let update_available_list available_list loc value =
-    List.map (remove_from_possible loc value) available_list
+let update_available_list available_list loc value =
+  List.map (remove_from_possible loc value) available_list
+
+let remove_available_by_loc location available_list =
+  List.filter (fun avail -> avail.loc <> location) available_list
 
 let extract_singletons available_list =
   List.filter (fun avail -> List.length avail.possible = 1) available_list
@@ -143,8 +151,38 @@ let update_and_remove_singletons available_list =
       available_list singletons
   in
   List.filter (fun avail -> not (List.mem avail.loc singletons)) updated_list
-    
-  let update_and_extract_singletons available_list =
+
+
+let update_and_remove_singletons available_list =
+  let singletons = singularAvailables available_list in
+  
+  let rec update sings acc_list = 
+    match sings with
+    | [] -> acc_list
+    | x :: xs -> 
+        (match x.possible with 
+          | [v] -> 
+              let updated_list = update_available_list acc_list x.loc v in
+              update xs updated_list
+          | _ -> failwith "This shouldn't happen")
+
+  in update singletons available_list
+
+(* let update_and_remove_singletons available_list =
+  let singletons = singularAvailables available_list in
+  
+  let rec update sings = 
+    match sings with
+    | [] -> available_list
+    | x :: xs -> 
+      (match x.possible with 
+      |[v] -> let value = v in let loc = x.loc in
+      update_available_list available_list loc value
+      | _ -> failwith "ne more se zgoditi")
+
+    in update singletons *)
+
+  (* let update_and_extract_singletons available_list =
     let singletons = List.filter (fun avail -> List.length avail.possible = 1) available_list in
     let singletons_data = List.map (fun avail -> (avail.loc, List.hd avail.possible)) singletons in
     let updated_list = 
@@ -158,7 +196,7 @@ let update_and_remove_singletons available_list =
   
   (* Function to insert singletons into a given grid *)
   let insert_singletons_into_grid grid singletons_data =
-    List.fold_left (fun current_grid (loc, value) -> insert_into_grid current_grid loc (Some value)) grid singletons_data
+    List.fold_left (fun current_grid (loc, value) -> insert_into_grid current_grid loc (Some value)) grid singletons_data *)
 
 (* Morda lahko nekoliko razširim trivialno reševanje... *)
 (* let solve_trivial_cells grid available_list=
@@ -222,37 +260,48 @@ let branch_state (state : state) : (state * state) option =
     
     if state.available_list |> has_singleton then
       (* V tem primeru samo vstavimo trivialne, ni treba razvejevati*)
+      
       let trivially_corrected = solve_trivial_cells state.current_grid state.available_list in
-      print_endline "Stara verzija -------------------------------------";
-      trivially_corrected |> grid_to_avail_list |> print_available_list;
+      (* print_endline "Originalni list -------------------------------------";
+      state.available_list |> print_available_list;
+      print_endline "Originalna to avail list -------------------------------------";
+      state.current_grid |> grid_to_avail_list |> print_available_list; *)
+      (* print_endline "Stara verzija -------------------------------------";
+      trivially_corrected |> grid_to_avail_list  |> print_available_list;
       print_endline "Nova verzija -------------------------------------";
       state.available_list |> update_and_remove_singletons |> nonzeroAvailables |> print_available_list;
-      print_endline "---------------------------------------------------";
+      print_endline "---------------------------------------------------"; *)
       (* TODO Tukaj je treba odstraniti grid_to_avail_list *)
-      if (state.available_list |> update_and_remove_singletons) = [] then
-        Some ({state with current_grid = trivially_corrected; available_list = state.available_list |> update_and_remove_singletons |> nonzeroAvailables; konec = true}, {state with available_list = []})
-      else Some ({state with current_grid = trivially_corrected; available_list = state.available_list |> update_and_remove_singletons |> nonzeroAvailables }, {state with available_list = []})
+      Some ({state with current_grid = trivially_corrected; available_list = state.available_list |> update_and_remove_singletons |> nonzeroAvailables }, {state with available_list = []})
     else
-        let first_avail = state.available_list  |> findSmallestAvailable in
-        let first_guess = Some (first_avail.possible |> List.hd) in
-        let new_grid_1 = insert_into_grid state.current_grid first_avail.loc first_guess in
-        let new_available_list_1 = update_available_list state.available_list first_avail.loc (first_avail.possible |> List.hd) in
-
-        match first_avail.possible |> List.length with
+        let smallest_avail = state.available_list |> findSmallestAvailable in
+        let first_guess = Some (smallest_avail.possible |> List.hd) in
+        let new_grid_1 = insert_into_grid state.current_grid smallest_avail.loc first_guess in
+        let new_available_list_1 = remove_available_by_loc smallest_avail.loc (update_available_list state.available_list smallest_avail.loc (smallest_avail.possible |> List.hd))  in
+        (* print_endline "tukaj napaka?"; *)
+        (* new_available_list_1 |> print_available_list;
+        print_endline "---------------------------------------------------";
+        new_grid_1 |> grid_to_avail_list |> print_available_list;
+        print_endline "---------------------------------------------------"; *)
+        match smallest_avail.possible |> List.length with
           | 2 ->
-            let second_guess = Some (first_avail.possible |>  List.rev |> List.hd) in
-            let new_grid_2 = insert_into_grid state.current_grid first_avail.loc second_guess in
-            let new_available_list2 = update_available_list state.available_list first_avail.loc (first_avail.possible |>  List.rev |> List.hd) in
-    
-            Some ({state with current_grid = new_grid_1; available_list = new_available_list_1 |> nonzeroAvailables}, {state with current_grid = new_grid_2; available_list = new_available_list2 |> nonzeroAvailables})
+            let second_guess = Some (smallest_avail.possible |> List.rev |> List.hd) in
+            let new_grid_2 = insert_into_grid state.current_grid smallest_avail.loc second_guess in
+            let new_available_list_2 = remove_available_by_loc smallest_avail.loc (update_available_list state.available_list smallest_avail.loc (smallest_avail.possible |>  List.rev |> List.hd)) in
+            (* new_available_list_2 |> print_available_list;
+            print_endline "---------------------------------------------------";
+            new_grid_2 |> grid_to_avail_list |> print_available_list;
+            print_endline "---------------------------------------------------"; *)
+            Some ({state with current_grid = new_grid_1; available_list = new_available_list_1 |> nonzeroAvailables}, {state with current_grid = new_grid_2; available_list = new_available_list_2 |> nonzeroAvailables})
           | _ -> (* V tem primeru moramo en element parametra possible odstraniti. *)
+          let preostanek_possibla = smallest_avail.possible |> List.tl in
           let new_available_list_2 =
             if List.length state.available_list = 0 then
               assert false
             else
               let update_avail i avail =
                 if i = 0 then
-                  {avail with possible = first_avail.possible |> List.tl}
+                  {avail with possible = preostanek_possibla}
                 else
                   avail
               in
